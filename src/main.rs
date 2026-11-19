@@ -341,7 +341,12 @@ impl AppState {
         }
 
         let ext = EXTENSIONS[self.format];
-        let stem = hls::file_stem(&task.url);
+        let title = task.title();
+        let stem = if title.trim().is_empty() {
+            hls::file_stem(&task.url)
+        } else {
+            title_to_filename(&title)
+        };
         let mut path = dir.join(format!("{stem}.{ext}"));
         let mut suffix = 2;
         while self.tasks.iter().any(|other| {
@@ -937,6 +942,53 @@ fn truncate_title(title: &str) -> String {
         out.push('…');
         out
     }
+}
+
+/// Turn a stream title into a safe, readable file name stem.
+fn title_to_filename(title: &str) -> String {
+    const INVALID: &[char] = &['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
+
+    let mut stem = String::new();
+    for c in title.trim().chars() {
+        if c.is_control() {
+            continue;
+        }
+        stem.push(if INVALID.contains(&c) { '_' } else { c });
+    }
+    let stem = stem.trim_end_matches(['.', ' ']);
+
+    // Avoid double extensions if the title already ends with one.
+    let lower = stem.to_ascii_lowercase();
+    let stem = [
+        ".m3u8", ".m3u", ".mkv", ".mp4", ".mov", ".ts", ".webm",
+    ]
+    .iter()
+    .find(|ext| lower.ends_with(**ext))
+    .map(|ext| &stem[..stem.len() - ext.len()])
+    .unwrap_or(stem);
+    let stem = stem.trim_end_matches(['.', ' ']);
+
+    // Stay well below the 255-byte filesystem limit for every platform.
+    let mut safe = String::new();
+    for c in stem.chars() {
+        if safe.len() + c.len_utf8() > 120 {
+            break;
+        }
+        safe.push(c);
+    }
+
+    // Windows reserved device names can't be used as file names.
+    let base = safe.split('.').next().unwrap_or("").to_ascii_uppercase();
+    if matches!(
+        base.as_str(),
+        "CON" | "PRN" | "AUX" | "NUL" | "COM1" | "COM2" | "COM3" | "COM4" | "COM5"
+            | "COM6" | "COM7" | "COM8" | "COM9" | "LPT1" | "LPT2" | "LPT3" | "LPT4"
+            | "LPT5" | "LPT6" | "LPT7" | "LPT8" | "LPT9"
+    ) {
+        safe.insert(0, '_');
+    }
+
+    if safe.is_empty() { "video".to_string() } else { safe }
 }
 
 fn derive_title(url: &str) -> String {

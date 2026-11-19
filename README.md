@@ -31,6 +31,8 @@ playlist → first variant → AES-128 key → segment CBC decrypt → append to
   bundled extension queue links, optionally starting them immediately.
 - **Bundled extension** — unpacked next to the executable on first launch; the
   sidebar opens the folder for you and shows whether the bridge is listening.
+- **Original names** — downloads are named after the stream/page title,
+  sanitized for your filesystem, instead of the playlist URL's file name.
 - **Safe removal** — the trash icon opens a confirmation dialog with an
   optional *Also remove the downloaded file* toggle (pre-checked when a file
   exists on disk). Cancel leaves both the task and the file untouched.
@@ -99,7 +101,7 @@ responses include permissive CORS headers.
 
 | Method | Path | Result |
 | --- | --- | --- |
-| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.2.1"}` |
+| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.2.2"}` |
 | `GET` | `/status` | active/pending counts, auto-start flag, per-stream state |
 | `GET` | `/list` | URLs currently in the queue |
 | `POST` | `/add?url=…&title=…` | queue a stream; needs `X-M3U8-Studio: 1`; also accepts a JSON body |
