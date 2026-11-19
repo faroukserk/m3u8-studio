@@ -15,7 +15,7 @@ playlist → first variant → AES-128 key → segment CBC decrypt → append to
 > If this project saved you some time:
 >
 > [![Support me on Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20me%20on%20Ko--fi-ac73f5?logo=ko-fi&logoColor=white)](https://ko-fi.com/faroukserkini)
-
+if you encounter any issues. just post them in ussues tab!
 ---
 
 ## Highlights
