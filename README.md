@@ -61,8 +61,10 @@ uses thin LTO and strips symbols.
 
 Pushing a `v*` tag (for example `v1.2.1`) runs
 `.github/workflows/release.yml`, which builds archives for **Windows x86_64**
-(`.zip`), **Linux x86_64**, **macOS arm64** and **macOS x86_64** (`.tar.gz`)
-and attaches them to the GitHub Release.
+(`.zip`), **Linux x86_64 (GNU and musl)**, **Linux aarch64**, **macOS arm64**
+and **macOS x86_64** (`.tar.gz`) and attaches them to the GitHub Release.
+The musl build is statically linked against OpenSSL and works on Alpine and
+older glibc-based distros; the aarch64 build targets 64-bit ARM Linux.
 You can also run the workflow manually from the Actions tab; manual runs upload
 the archives as build artifacts without creating a release.
 
@@ -101,7 +103,7 @@ responses include permissive CORS headers.
 
 | Method | Path | Result |
 | --- | --- | --- |
-| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.2.2"}` |
+| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.2.3"}` |
 | `GET` | `/status` | active/pending counts, auto-start flag, per-stream state |
 | `GET` | `/list` | URLs currently in the queue |
 | `POST` | `/add?url=…&title=…` | queue a stream; needs `X-M3U8-Studio: 1`; also accepts a JSON body |

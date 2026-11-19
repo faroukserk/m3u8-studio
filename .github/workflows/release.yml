@@ -24,18 +24,38 @@ jobs:
           - os: ubuntu-latest
             label: linux-x86_64
             target: linux-x86_64
+            rust_target: x86_64-unknown-linux-gnu
+            binary: m3u8-studio
+            archive: tar.gz
+          - os: ubuntu-latest
+            label: linux-x86_64-musl
+            target: linux-x86_64-musl
+            rust_target: x86_64-unknown-linux-musl
+            binary: m3u8-studio
+            archive: tar.gz
+          - os: ubuntu-24.04-arm
+            label: linux-aarch64
+            target: linux-aarch64
+            rust_target: aarch64-unknown-linux-gnu
+            binary: m3u8-studio
             archive: tar.gz
           - os: macos-latest
             label: macos-arm64
             target: macos-arm64
+            rust_target: aarch64-apple-darwin
+            binary: m3u8-studio
             archive: tar.gz
           - os: macos-15-intel
             label: macos-x86_64
             target: macos-x86_64
+            rust_target: x86_64-apple-darwin
+            binary: m3u8-studio
             archive: tar.gz
           - os: windows-latest
             label: windows-x86_64
             target: windows-x86_64
+            rust_target: x86_64-pc-windows-msvc
+            binary: m3u8-studio.exe
             archive: zip
 
     steps:
@@ -50,10 +70,12 @@ jobs:
             pkg-config libssl-dev libfontconfig1-dev \
             libx11-dev libxext-dev libxcb1-dev libxcb-shape0-dev \
             libxcb-xfixes0-dev libxkbcommon-x11-dev libwayland-dev \
-            libegl1-mesa-dev libgl1-mesa-dev
+            libegl1-mesa-dev libgl1-mesa-dev musl-tools
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
 
       - name: Cache cargo artifacts
         uses: Swatinem/rust-cache@v2
@@ -61,7 +83,7 @@ jobs:
           key: ${{ matrix.target }}
 
       - name: Build release binary
-        run: cargo build --release --locked
+        run: cargo build --release --locked --target ${{ matrix.rust_target }}
 
       - name: Package archive (tar.gz)
         if: matrix.archive == 'tar.gz'
@@ -71,7 +93,7 @@ jobs:
           version="${GITHUB_REF_NAME:-manual}"
           name="m3u8-studio-${version}-${{ matrix.target }}"
           mkdir -p "dist/${name}"
-          cp target/release/m3u8-studio "dist/${name}/"
+          cp "target/${{ matrix.rust_target }}/release/${{ matrix.binary }}" "dist/${name}/"
           cp README.md LICENSE "dist/${name}/"
           # The files are embedded in the binary, but shipping them as a folder
           # lets people load the extension manually if the app can't unpack it.
@@ -87,7 +109,7 @@ jobs:
           $name = "m3u8-studio-$version-${{ matrix.target }}"
           $stage = Join-Path "dist" $name
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
-          Copy-Item "target/release/m3u8-studio.exe" $stage
+          Copy-Item "target/${{ matrix.rust_target }}/release/${{ matrix.binary }}" $stage
           Copy-Item "README.md", "LICENSE" $stage
           Copy-Item -Recurse "extension" (Join-Path $stage "extension")
           Compress-Archive -Path $stage -DestinationPath "$name.zip"
