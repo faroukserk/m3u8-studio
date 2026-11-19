@@ -1,0 +1,277 @@
+import { Tokens, Icons } from "tokens.slint";
+import { Label, Glyph, GhostButton, TextButton, FormatPill, Toggle, Stepper } from "widgets.slint";
+
+export component Sidebar inherits Rectangle {
+    in property <int> selected-format: 1;
+    in property <string> dest-dir: "";
+    in property <int> restart-secs: 10;
+    in property <bool> auto-start: true;
+    in property <bool> bridge-ok: false;
+    in property <string> bridge-address: "127.0.0.1:37811";
+    in property <int> received: 0;
+    in property <string> received-text: "0 links received";
+    in property <string> version: "1.2";
+
+    callback format-changed(int);
+    callback browse-destination();
+    callback restart-changed(int);
+    callback auto-start-changed(bool);
+    callback open-setup();
+    callback copy-address();
+
+    width: 270px;
+    background: #0D0F16;
+
+    VerticalLayout {
+        padding-left: 18px;
+        padding-right: 18px;
+        padding-top: 18px;
+        padding-bottom: 14px;
+        spacing: 0px;
+
+        // brand ------------------------------------------------------------
+        HorizontalLayout {
+            spacing: 9px;
+            cross-axis-alignment: center;
+
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                border-radius: 9px;
+                background: Tokens.accent-gradient;
+
+                Glyph {
+                    width: 15px;
+                    height: 15px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    shape: Icons.play;
+                    tint: #0A0D14;
+                    filled: true;
+                }
+            }
+
+            VerticalLayout {
+                spacing: 1px;
+                cross-axis-alignment: center;
+                Label { text: "m3u8 studio"; size: 14px; weight: 600; }
+                Label { text: "HLS downloader"; size: 10px; tone: Tokens.faint; }
+            }
+        }
+
+        Rectangle { height: 18px; }
+
+        // output format ----------------------------------------------------
+        Label {
+            text: "OUTPUT FORMAT";
+            size: 9.5px;
+            weight: 600;
+            tone: Tokens.faint;
+            letter-spacing: 1.2px;
+        }
+        Rectangle { height: 7px; }
+
+        HorizontalLayout {
+            spacing: 5px;
+            FormatPill { text: "MKV"; active: root.selected-format == 0; clicked => { root.format-changed(0); } }
+            FormatPill { text: "MP4"; active: root.selected-format == 1; clicked => { root.format-changed(1); } }
+            FormatPill { text: "MOV"; active: root.selected-format == 2; clicked => { root.format-changed(2); } }
+            FormatPill { text: "TS"; active: root.selected-format == 3; clicked => { root.format-changed(3); } }
+            FormatPill { text: "WebM"; active: root.selected-format == 4; clicked => { root.format-changed(4); } }
+        }
+        Rectangle { height: 6px; }
+        Label {
+            text: "Segments are written straight into one file — no re-encoding.";
+            size: 9.5px;
+            tone: Tokens.faint;
+            multiline: true;
+        }
+
+        Rectangle { height: 18px; }
+
+        // destination ------------------------------------------------------
+        HorizontalLayout {
+            cross-axis-alignment: center;
+            Label {
+                text: "SAVE TO";
+                size: 9.5px;
+                weight: 600;
+                tone: Tokens.faint;
+                letter-spacing: 1.2px;
+                horizontal-stretch: 1;
+            }
+            Label { text: "Click to change"; size: 9.5px; tone: #4E5670; }
+        }
+        Rectangle { height: 7px; }
+
+        Rectangle {
+            height: 32px;
+            border-radius: 7px;
+            background: dest-area.has-hover ? Tokens.panel-3 : Tokens.input;
+            border-width: 1px;
+            border-color: dest-area.has-hover ? Tokens.border-strong : Tokens.border;
+            animate background, border-color { duration: 120ms; }
+
+            HorizontalLayout {
+                padding-left: 10px;
+                padding-right: 8px;
+                spacing: 8px;
+                cross-axis-alignment: center;
+                Glyph { width: 13px; height: 13px; shape: Icons.folder; tint: Tokens.faint; }
+                Label {
+                    text: root.dest-dir;
+                    size: 10.5px;
+                    tone: Tokens.dim;
+                    elide: true;
+                    horizontal-stretch: 1;
+                }
+            }
+
+            dest-area := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.browse-destination(); }
+            }
+        }
+
+        Rectangle { height: 16px; }
+
+        // recovery ---------------------------------------------------------
+        Label {
+            text: "RECOVERY";
+            size: 9.5px;
+            weight: 600;
+            tone: Tokens.faint;
+            letter-spacing: 1.2px;
+        }
+        Rectangle { height: 7px; }
+
+        HorizontalLayout {
+            cross-axis-alignment: center;
+            spacing: 8px;
+            Label { text: "Auto-restart"; size: 12px; tone: Tokens.text; horizontal-stretch: 1; }
+            Stepper {
+                value: root.restart-secs;
+                changed(v) => { root.restart-changed(v); }
+            }
+        }
+        Rectangle { height: 6px; }
+        Label {
+            text: "Retry a failed stream after N seconds. Live playlists are re-polled at the same interval.";
+            size: 9.5px;
+            tone: Tokens.faint;
+            multiline: true;
+        }
+
+        Rectangle { height: 14px; }
+
+        // extension behaviour ---------------------------------------------
+        Rectangle {
+            height: 1px;
+            background: Tokens.border;
+        }
+        Rectangle { height: 12px; }
+
+        HorizontalLayout {
+            cross-axis-alignment: center;
+            spacing: 8px;
+            VerticalLayout {
+                spacing: 2px;
+                horizontal-stretch: 1;
+                Label { text: "Auto-download from browser"; size: 11.5px; weight: 500; }
+                Label { text: "Start streams the extension sends"; size: 10px; tone: Tokens.faint; }
+            }
+            Toggle {
+                checked: root.auto-start;
+                toggled(v) => { root.auto-start-changed(v); }
+            }
+        }
+
+        Rectangle { vertical-stretch: 1; min-height: 14px; }
+
+        // bridge -----------------------------------------------------------
+        Rectangle {
+            vertical-stretch: 0;
+            border-radius: 10px;
+            background: #11151F;
+            border-width: 1px;
+            border-color: Tokens.border;
+
+            VerticalLayout {
+                padding: 10px;
+                spacing: 6px;
+
+                HorizontalLayout {
+                    spacing: 7px;
+                    cross-axis-alignment: center;
+
+                    Rectangle {
+                        width: 7px;
+                        height: 7px;
+                        border-radius: 4px;
+                        background: root.bridge-ok ? Tokens.green : Tokens.red;
+                        drop-shadow-color: root.bridge-ok ? #3DDC9780 : #FF6B8180;
+                        drop-shadow-blur: 6px;
+                    }
+                    Label {
+                        text: "Browser bridge";
+                        size: 11.5px;
+                        weight: 600;
+                        horizontal-stretch: 1;
+                    }
+                    Label {
+                        text: root.bridge-ok ? "LISTENING" : "OFFLINE";
+                        size: 9px;
+                        weight: 600;
+                        tone: root.bridge-ok ? Tokens.green : Tokens.red;
+                        letter-spacing: 0.8px;
+                    }
+                }
+
+                HorizontalLayout {
+                    cross-axis-alignment: center;
+                    spacing: 6px;
+
+                    Label {
+                        text: root.bridge-address;
+                        size: 10px;
+                        tone: Tokens.dim;
+                        font-family: Tokens.mono;
+                        horizontal-stretch: 1;
+                    }
+                    TextButton {
+                        text: "Copy";
+                        clicked => { root.copy-address(); }
+                    }
+                }
+
+                Label {
+                    text: root.received-text;
+                    size: 9.5px;
+                    tone: Tokens.faint;
+                }
+
+                Rectangle { height: 2px; }
+
+                GhostButton {
+                    text: "Extension setup";
+                    icon: Icons.external;
+                    clicked => { root.open-setup(); }
+                    horizontal-stretch: 1;
+                }
+            }
+        }
+
+        Rectangle { height: 9px; }
+        HorizontalLayout {
+            alignment: center;
+            Label { text: "v" + root.version + " · Slint UI"; size: 9px; tone: #454D63; }
+        }
+    }
+
+    Rectangle {
+        x: parent.width - 1px;
+        width: 1px;
+        height: 100%;
+        background: Tokens.border;
+    }
+}

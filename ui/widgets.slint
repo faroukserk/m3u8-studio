@@ -1,0 +1,519 @@
+import { TaskRow } from "models.slint";
+import { Tokens, Icons } from "tokens.slint";
+
+// ---------------------------------------------------------------- typography
+
+export component Label inherits Text {
+    in property <length> size: 13px;
+    in property <int> weight: 400;
+    in property <brush> tone: Tokens.text;
+    in property <bool> elide: false;
+    in property <bool> multiline: false;
+    in property <TextHorizontalAlignment> align: start;
+
+    font-family: Tokens.font;
+    font-size: root.size;
+    font-weight: root.weight;
+    color: root.tone;
+    horizontal-alignment: root.align;
+    vertical-alignment: center;
+    overflow: root.elide ? TextOverflow.elide : TextOverflow.clip;
+    wrap: root.multiline ? TextWrap.word-wrap : TextWrap.no-wrap;
+}
+
+// --------------------------------------------------------------------- icons
+
+export component Glyph inherits Path {
+    in property <string> shape: "";
+    in property <brush> tint: Tokens.dim;
+    in property <bool> filled: false;
+
+    width: 16px;
+    height: 16px;
+    viewbox-width: 24;
+    viewbox-height: 24;
+    commands: root.shape;
+    fill: root.filled ? root.tint : transparent;
+    stroke: root.filled ? transparent : root.tint;
+    stroke-width: 1.7px;
+    stroke-line-cap: round;
+    stroke-line-join: round;
+}
+
+export component IconButton inherits Rectangle {
+    in property <string> shape;
+    in property <brush> tint: Tokens.dim;
+    in property <brush> hover-tint: Tokens.text;
+    in property <brush> hover-bg: Tokens.panel-3;
+    in property <length> icon-size: 15px;
+    in property <bool> enabled: true;
+    in property <bool> filled: false;
+    callback clicked();
+
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    background: (ta.has-hover && root.enabled) ? root.hover-bg : transparent;
+    opacity: root.enabled ? 1 : 0.3;
+    animate background { duration: 120ms; }
+
+    Glyph {
+        width: root.icon-size;
+        height: root.icon-size;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        shape: root.shape;
+        tint: (ta.has-hover && root.enabled) ? root.hover-tint : root.tint;
+        filled: root.filled;
+    }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// ------------------------------------------------------------------- buttons
+
+export component PrimaryButton inherits Rectangle {
+    in property <string> text;
+    in property <string> icon: "";
+    in property <bool> enabled: true;
+    callback clicked();
+
+    height: 32px;
+    min-width: 80px;
+    horizontal-stretch: 0;
+    border-radius: 8px;
+    background: !root.enabled
+        ? #262C3B
+        : (ta.has-hover ? #8E9CFF : Tokens.accent-gradient);
+    opacity: root.enabled ? 1 : 0.45;
+    animate background { duration: 140ms; }
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 6px;
+        alignment: center;
+
+        if root.icon != "" : Glyph {
+            width: 13px;
+            height: 13px;
+            shape: root.icon;
+            tint: #0A0D14;
+        }
+        Label {
+            text: root.text;
+            size: 12px;
+            weight: 600;
+            tone: #0A0D14;
+        }
+    }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component GhostButton inherits Rectangle {
+    in property <string> text;
+    in property <string> icon: "";
+    in property <bool> enabled: true;
+    in property <brush> tone: Tokens.dim;
+    callback clicked();
+
+    height: 28px;
+    min-width: 30px;
+    horizontal-stretch: 0;
+    border-radius: 7px;
+    border-width: 1px;
+    border-color: (ta.has-hover && root.enabled) ? Tokens.border-strong : Tokens.border;
+    background: (ta.has-hover && root.enabled) ? Tokens.panel-3 : transparent;
+    opacity: root.enabled ? 1 : 0.4;
+    animate background, border-color { duration: 120ms; }
+
+    HorizontalLayout {
+        padding-left: 9px;
+        padding-right: 9px;
+        spacing: 5px;
+        alignment: center;
+
+        if root.icon != "" : Glyph {
+            width: 13px;
+            height: 13px;
+            shape: root.icon;
+            tint: root.tone;
+        }
+        Label {
+            text: root.text;
+            size: 11px;
+            weight: 500;
+            tone: root.tone;
+        }
+    }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component TextButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    height: 22px;
+    horizontal-stretch: 0;
+    border-radius: 5px;
+    background: ta.has-hover ? Tokens.panel-3 : transparent;
+    opacity: root.enabled ? 1 : 0.4;
+
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        alignment: center;
+        Label {
+            text: root.text;
+            size: 10px;
+            weight: 500;
+            tone: ta.has-hover ? Tokens.text : Tokens.faint;
+        }
+    }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// ------------------------------------------------------------------- inputs
+
+export component FormatPill inherits Rectangle {
+    in property <string> text;
+    in property <bool> active: false;
+    callback clicked();
+
+    height: 26px;
+    horizontal-stretch: 1;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: root.active ? Tokens.accent-line : #202634;
+    background: root.active
+        ? Tokens.accent-soft
+        : (ta.has-hover ? Tokens.panel-3 : #121620);
+    animate background, border-color { duration: 130ms; }
+
+    Label {
+        width: parent.width;
+        height: parent.height;
+        text: root.text;
+        size: 10px;
+        weight: root.active ? 600 : 500;
+        tone: root.active ? Tokens.accent-text : Tokens.dim;
+        align: center;
+        letter-spacing: 0.2px;
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component Toggle inherits Rectangle {
+    in property <bool> checked: false;
+    callback toggled(bool);
+
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: root.checked ? Tokens.accent : #272D3C;
+    animate background { duration: 150ms; }
+
+    Rectangle {
+        width: 16px;
+        height: 16px;
+        y: 2px;
+        x: root.checked ? root.width - 18px : 2px;
+        border-radius: 8px;
+        background: root.checked ? #0A0D14 : #9AA3B7;
+        animate x { duration: 150ms; easing: ease-out; }
+        animate background { duration: 150ms; }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.toggled(!root.checked);
+        }
+    }
+}
+
+export component Stepper inherits Rectangle {
+    in property <int> value: 10;
+    in property <int> low: 2;
+    in property <int> high: 1000;
+    callback changed(int);
+
+    width: 92px;
+    height: 28px;
+    border-radius: 7px;
+    background: Tokens.input;
+    border-width: 1px;
+    border-color: Tokens.border;
+
+    HorizontalLayout {
+        spacing: 0px;
+
+        Rectangle {
+            width: 26px;
+            height: parent.height;
+            border-radius: 6px;
+            background: minus.has-hover ? Tokens.panel-3 : transparent;
+            Label {
+                width: parent.width;
+                height: parent.height;
+                text: "-";
+                size: 13px;
+                tone: Tokens.dim;
+                align: center;
+            }
+            minus := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.changed(max(root.low, root.value - 1));
+                }
+            }
+        }
+
+        Label {
+            text: root.value;
+            size: 11.5px;
+            weight: 600;
+            tone: Tokens.text;
+            align: center;
+            horizontal-stretch: 1;
+        }
+
+        Rectangle {
+            width: 26px;
+            height: parent.height;
+            border-radius: 6px;
+            background: plus.has-hover ? Tokens.panel-3 : transparent;
+            Label {
+                width: parent.width;
+                height: parent.height;
+                text: "+";
+                size: 13px;
+                tone: Tokens.dim;
+                align: center;
+            }
+            plus := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.changed(min(root.high, root.value + 1));
+                }
+            }
+        }
+    }
+}
+
+// ----------------------------------------------------------------- progress
+
+export component ProgressBar inherits Rectangle {
+    in property <float> value: 0;
+
+    height: 4px;
+    border-radius: 2px;
+    background: #1E2432;
+
+    Rectangle {
+        height: parent.height;
+        border-radius: 3px;
+        width: root.value <= 0.0001
+            ? 0px
+            : max(parent.height, parent.width * clamp(root.value, 0, 1));
+        background: Tokens.progress-gradient;
+        animate width { duration: 260ms; easing: ease-out; }
+    }
+}
+
+component Badge inherits Rectangle {
+    in property <string> text;
+    in property <color> tone;
+    in property <color> soft;
+
+    height: 20px;
+    border-radius: 5px;
+    background: root.soft;
+
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        alignment: center;
+        Label {
+            text: root.text;
+            size: 9.5px;
+            weight: 600;
+            tone: root.tone;
+        }
+    }
+}
+
+// ---------------------------------------------------------------- task cards
+
+export component TaskCard inherits Rectangle {
+    in property <TaskRow> task;
+    in property <bool> selected: false;
+    in property <bool> pulse: false;
+    callback select();
+    callback start();
+    callback stop();
+    callback remove();
+    callback open();
+
+    property <color> tone: task.state == 2 ? Tokens.green
+        : task.state == 3 ? Tokens.amber
+        : task.state == 4 ? Tokens.red
+        : task.state == 1 ? Tokens.accent
+        : Tokens.slate;
+    property <color> soft: task.state == 2 ? Tokens.green-soft
+        : task.state == 3 ? Tokens.amber-soft
+        : task.state == 4 ? Tokens.red-soft
+        : task.state == 1 ? Tokens.accent-soft
+        : Tokens.slate-soft;
+    property <string> glyph: task.state == 2 ? Icons.check
+        : task.state == 3 ? Icons.stop
+        : task.state == 4 ? Icons.alert
+        : task.state == 1 ? Icons.wave
+        : Icons.clock;
+
+    height: 84px;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: root.selected ? Tokens.accent-line : Tokens.border;
+    background: root.selected
+        ? #161B2B
+        : (card-ta.has-hover ? #131824 : Tokens.panel);
+    animate background, border-color { duration: 140ms; }
+
+    card-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.select(); }
+    }
+
+    // selection rail
+    Rectangle {
+        x: 0;
+        y: 18px;
+        width: 2px;
+        height: parent.height - 36px;
+        border-radius: 1px;
+        background: Tokens.accent;
+        visible: root.selected;
+    }
+
+    VerticalLayout {
+        padding-left: 13px;
+        padding-right: 10px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        spacing: 8px;
+
+        HorizontalLayout {
+            spacing: 10px;
+
+            Rectangle {
+                width: 34px;
+                height: 34px;
+                border-radius: 9px;
+                background: root.soft;
+
+                Glyph {
+                    width: 17px;
+                    height: 17px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    shape: root.glyph;
+                    tint: root.tone;
+                    opacity: (root.task.state == 1 && !root.pulse) ? 0.45 : 1;
+                    animate opacity { duration: 550ms; }
+                }
+            }
+
+            VerticalLayout {
+                spacing: 2px;
+                horizontal-stretch: 1;
+                min-width: 80px;
+
+                Label {
+                    text: root.task.title;
+                    size: 13px;
+                    weight: 600;
+                    elide: true;
+                }
+                Label {
+                    text: root.task.url;
+                    size: 10.5px;
+                    tone: Tokens.faint;
+                    elide: true;
+                }
+            }
+
+            Badge {
+                text: root.task.badge;
+                tone: root.tone;
+                soft: root.soft;
+                cross-axis-self-alignment: center;
+            }
+
+            HorizontalLayout {
+                spacing: 2px;
+                cross-axis-alignment: center;
+
+                IconButton {
+                    shape: root.task.state == 1 ? Icons.stop : Icons.play;
+                    filled: root.task.state != 1;
+                    tint: root.task.state == 1 ? Tokens.amber : Tokens.dim;
+                    hover-tint: root.task.state == 1 ? Tokens.amber : Tokens.text;
+                    clicked => {
+                        if (root.task.state == 1) { root.stop(); } else { root.start(); }
+                    }
+                }
+                if root.task.can-open : IconButton {
+                    shape: Icons.folder;
+                    hover-tint: Tokens.green;
+                    clicked => { root.open(); }
+                }
+                IconButton {
+                    shape: Icons.trash;
+                    hover-tint: Tokens.red;
+                    clicked => { root.remove(); }
+                }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 10px;
+            ProgressBar {
+                value: root.task.progress;
+                horizontal-stretch: 1;
+                cross-axis-self-alignment: center;
+            }
+            Label {
+                text: root.task.detail;
+                size: 10px;
+                tone: Tokens.faint;
+                align: right;
+                min-width: 165px;
+            }
+        }
+    }
+}

@@ -1,0 +1,13 @@
+// Row model handed to the UI by Rust.
+
+export struct TaskRow {
+    id: int,
+    title: string,
+    url: string,
+    badge: string,
+    detail: string,
+    progress: float,
+    state: int, // 0 queued, 1 running, 2 done, 3 stopped, 4 failed
+    can-open: bool,
+    file-name: string,
+}

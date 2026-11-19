@@ -1,0 +1,853 @@
+import { LineEdit, Palette, ScrollView } from "std-widgets.slint";
+import { Tokens, Icons } from "tokens.slint";
+import { TaskRow } from "models.slint";
+import { Sidebar } from "sidebar.slint";
+import {
+    Label,
+    Glyph,
+    IconButton,
+    PrimaryButton,
+    GhostButton,
+    TextButton,
+    TaskCard,
+} from "widgets.slint";
+
+component EmptyState inherits Rectangle {
+    callback setup();
+
+    VerticalLayout {
+        width: 400px;
+        x: (parent.width - self.width) / 2;
+        y: max(10px, (parent.height - self.height) / 2);
+        spacing: 0px;
+        alignment: center;
+
+        Rectangle {
+            width: 58px;
+            height: 58px;
+            border-radius: 18px;
+            background: Tokens.accent-soft;
+            border-width: 1px;
+            border-color: Tokens.accent-line;
+
+            Glyph {
+                width: 22px;
+                height: 22px;
+                x: 18px;
+                y: 18px;
+                shape: Icons.play;
+                tint: Tokens.accent;
+                filled: true;
+            }
+        }
+
+        Rectangle { height: 16px; }
+
+        Label {
+            text: "Nothing in the queue";
+            size: 16px;
+            weight: 600;
+            align: center;
+        }
+
+        Rectangle { height: 6px; }
+
+        Label {
+            text: "Paste an HLS playlist link above, or send a stream straight from your browser with the extension.";
+            size: 11px;
+            tone: Tokens.dim;
+            multiline: true;
+            align: center;
+        }
+
+        Rectangle { height: 14px; }
+
+        HorizontalLayout {
+            alignment: center;
+            GhostButton {
+                text: "Set up the browser extension";
+                icon: Icons.link;
+                clicked => { root.setup(); }
+            }
+        }
+    }
+}
+
+component Toast inherits Rectangle {
+    in property <string> text;
+
+    width: 320px;
+    height: 42px;
+    border-radius: 10px;
+    background: #1A2134;
+    border-width: 1px;
+    border-color: Tokens.accent-line;
+    drop-shadow-color: #00000080;
+    drop-shadow-blur: 18px;
+    drop-shadow-offset-y: 6px;
+
+    HorizontalLayout {
+        padding-left: 13px;
+        padding-right: 15px;
+        spacing: 9px;
+        cross-axis-alignment: center;
+
+        Rectangle {
+            width: 22px;
+            height: 22px;
+            border-radius: 11px;
+            background: Tokens.green-soft;
+            Glyph {
+                width: 12px;
+                height: 12px;
+                x: 5px;
+                y: 5px;
+                shape: Icons.check;
+                tint: Tokens.green;
+            }
+        }
+        Label {
+            text: root.text;
+            size: 11.5px;
+            tone: Tokens.text;
+            elide: true;
+        }
+    }
+}
+
+component ActivityPanel inherits Rectangle {
+    in property <string> log-text;
+    callback close();
+    callback clear();
+
+    height: 158px;
+    background: Tokens.log-bg;
+
+    Rectangle {
+        y: 0;
+        width: 100%;
+        height: 1px;
+        background: Tokens.border;
+    }
+
+    VerticalLayout {
+        padding-left: 26px;
+        padding-right: 22px;
+        padding-top: 11px;
+        padding-bottom: 12px;
+        spacing: 6px;
+
+        HorizontalLayout {
+            spacing: 8px;
+            cross-axis-alignment: center;
+            Label {
+                text: "ACTIVITY";
+                size: 9.5px;
+                weight: 600;
+                tone: Tokens.faint;
+                letter-spacing: 1.3px;
+                horizontal-stretch: 1;
+            }
+            TextButton { text: "Clear"; clicked => { root.clear(); } }
+            IconButton {
+                shape: Icons.close;
+                icon-size: 13px;
+                clicked => { root.close(); }
+            }
+        }
+
+        ScrollView {
+            vertical-scrollbar-policy: ScrollBarPolicy.as-needed;
+            Text {
+                width: parent.width;
+                text: root.log-text;
+                font-family: Tokens.mono;
+                font-size: 10.5px;
+                color: Tokens.dim;
+                wrap: word-wrap;
+            }
+        }
+    }
+}
+
+component SetupStep inherits HorizontalLayout {
+    in property <string> number;
+    in property <string> text;
+
+    spacing: 11px;
+    cross-axis-alignment: center;
+
+    Rectangle {
+        width: 21px;
+        height: 21px;
+        border-radius: 11px;
+        background: Tokens.accent-soft;
+        Label {
+            width: parent.width;
+            height: parent.height;
+            text: root.number;
+            size: 10px;
+            weight: 600;
+            tone: Tokens.accent-text;
+            align: center;
+        }
+    }
+
+    Label {
+        text: root.text;
+        size: 11px;
+        tone: Tokens.dim;
+        multiline: true;
+        horizontal-stretch: 1;
+    }
+}
+
+component SetupOverlay inherits Rectangle {
+    in property <string> bridge-address;
+    in property <string> extension-path;
+    in property <bool> bridge-ok;
+    callback close();
+    callback open-folder();
+    callback copy-address();
+
+    background: #04060BC7;
+
+    TouchArea {
+        mouse-cursor: default;
+        clicked => { root.close(); }
+    }
+
+    Rectangle {
+        width: 566px;
+        height: 486px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        border-radius: 16px;
+        background: Tokens.panel;
+        border-width: 1px;
+        border-color: Tokens.border-strong;
+        drop-shadow-color: #000000A0;
+        drop-shadow-blur: 40px;
+        drop-shadow-offset-y: 16px;
+
+        TouchArea { }
+
+        VerticalLayout {
+            padding-left: 26px;
+            padding-right: 26px;
+            padding-top: 22px;
+            padding-bottom: 22px;
+            spacing: 0px;
+
+            HorizontalLayout {
+                spacing: 12px;
+                cross-axis-alignment: center;
+
+                Rectangle {
+                    width: 38px;
+                    height: 38px;
+                    border-radius: 11px;
+                    background: Tokens.accent-gradient;
+                        Glyph {
+                            width: 16px;
+                            height: 16px;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                            shape: Icons.link;
+                            tint: #0A0D14;
+                        }
+                }
+
+                VerticalLayout {
+                    spacing: 2px;
+                    horizontal-stretch: 1;
+                    Label { text: "Browser extension"; size: 16px; weight: 600; }
+                    Label { text: "Send HLS streams from Chrome, Edge or Brave"; size: 10.5px; tone: Tokens.faint; }
+                }
+
+                IconButton {
+                    shape: Icons.close;
+                    clicked => { root.close(); }
+                }
+            }
+
+            Rectangle { height: 18px; }
+            Rectangle { height: 1px; background: Tokens.border; }
+            Rectangle { height: 16px; }
+
+            Label {
+                text: "The desktop app hosts a tiny bridge on this machine. The extension talks to it directly — no account, no cloud.";
+                size: 11px;
+                tone: Tokens.dim;
+                multiline: true;
+            }
+
+            Rectangle { height: 16px; }
+
+            SetupStep {
+                number: "1";
+                text: "Keep m3u8 studio running — the bridge starts automatically with the app.";
+            }
+            Rectangle { height: 10px; }
+            SetupStep {
+                number: "2";
+                text: "Open chrome://extensions, enable Developer mode, click Load unpacked and choose the folder below.";
+            }
+            Rectangle { height: 10px; }
+            SetupStep {
+                number: "3";
+                text: "Play a video, then click the toolbar icon. Detected streams appear here instantly.";
+            }
+
+            Rectangle { height: 18px; }
+
+            Rectangle {
+                height: 42px;
+                border-radius: 9px;
+                background: Tokens.input;
+                border-width: 1px;
+                border-color: Tokens.border;
+
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 6px;
+                    spacing: 8px;
+                    cross-axis-alignment: center;
+
+                    Rectangle {
+                        width: 7px;
+                        height: 7px;
+                        border-radius: 4px;
+                        background: root.bridge-ok ? Tokens.green : Tokens.red;
+                    }
+                    Label {
+                        text: root.bridge-address;
+                        size: 11px;
+                        tone: Tokens.text;
+                        font-family: Tokens.mono;
+                        horizontal-stretch: 1;
+                    }
+                    TextButton { text: "Copy"; clicked => { root.copy-address(); } }
+                }
+            }
+
+            Rectangle { height: 6px; }
+
+            Label {
+                text: root.extension-path;
+                size: 9.5px;
+                tone: Tokens.faint;
+                font-family: Tokens.mono;
+                elide: true;
+            }
+
+            Rectangle { vertical-stretch: 1; min-height: 12px; }
+
+            HorizontalLayout {
+                spacing: 8px;
+                Label {
+                    text: "Loopback only · 127.0.0.1";
+                    size: 9.5px;
+                    tone: #4E5670;
+                    horizontal-stretch: 1;
+                }
+                GhostButton { text: "Close"; clicked => { root.close(); } }
+                PrimaryButton {
+                    text: "Open extension folder";
+                    icon: Icons.folder;
+                    clicked => { root.open-folder(); }
+                }
+            }
+        }
+    }
+}
+
+component RemoveDialog inherits Rectangle {
+    in property <string> title;
+    in property <string> file-name;
+    in property <bool> file-exists;
+    in-out property <bool> remove-file;
+    callback cancel();
+    callback confirm(bool);
+
+    background: #04060BC7;
+
+    TouchArea {
+        mouse-cursor: default;
+        clicked => { root.cancel(); }
+    }
+
+    Rectangle {
+        width: 430px;
+        height: 268px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        border-radius: 14px;
+        background: Tokens.panel;
+        border-width: 1px;
+        border-color: Tokens.border-strong;
+        drop-shadow-color: #000000A0;
+        drop-shadow-blur: 36px;
+        drop-shadow-offset-y: 14px;
+
+        TouchArea { }
+
+        VerticalLayout {
+            padding-left: 22px;
+            padding-right: 22px;
+            padding-top: 18px;
+            padding-bottom: 18px;
+            spacing: 0px;
+
+            HorizontalLayout {
+                spacing: 11px;
+                cross-axis-alignment: center;
+
+                Rectangle {
+                    width: 34px;
+                    height: 34px;
+                    border-radius: 9px;
+                    background: Tokens.red-soft;
+
+                    Glyph {
+                        width: 16px;
+                        height: 16px;
+                        x: 9px;
+                        y: 9px;
+                        shape: Icons.trash;
+                        tint: Tokens.red;
+                    }
+                }
+
+                VerticalLayout {
+                    spacing: 2px;
+                    horizontal-stretch: 1;
+                    Label { text: "Remove stream?"; size: 15px; weight: 600; }
+                    Label { text: "Take this download out of the queue."; size: 10.5px; tone: Tokens.faint; }
+                }
+            }
+
+            Rectangle { height: 14px; }
+            Rectangle { height: 1px; background: Tokens.border; }
+            Rectangle { height: 13px; }
+
+            Label { text: root.title; size: 12px; weight: 600; elide: true; }
+            Rectangle { height: 9px; }
+
+            Rectangle {
+                height: 44px;
+                border-radius: 8px;
+                background: Tokens.input;
+                border-width: 1px;
+                border-color: Tokens.border;
+                opacity: root.file-exists ? 1 : 0.55;
+
+                HorizontalLayout {
+                    padding-left: 11px;
+                    padding-right: 11px;
+                    spacing: 10px;
+                    cross-axis-alignment: center;
+
+                    Rectangle {
+                        width: 17px;
+                        height: 17px;
+                        border-radius: 4px;
+                        border-width: 1px;
+                        border-color: root.remove-file ? Tokens.accent : Tokens.border-strong;
+                        background: root.remove-file ? Tokens.accent : transparent;
+
+                        if root.remove-file : Glyph {
+                            width: 11px;
+                            height: 11px;
+                            x: 3px;
+                            y: 3px;
+                            shape: Icons.check;
+                            tint: #0A0D14;
+                        }
+                    }
+
+                    VerticalLayout {
+                        spacing: 2px;
+                        horizontal-stretch: 1;
+                        Label {
+                            text: "Also remove the downloaded file";
+                            size: 11px;
+                            weight: 500;
+                            tone: root.file-exists ? Tokens.text : Tokens.faint;
+                        }
+                        Label {
+                            text: root.file-exists ? root.file-name : "No file on disk for this stream";
+                            size: 9.5px;
+                            tone: Tokens.faint;
+                            elide: true;
+                            font-family: Tokens.mono;
+                        }
+                    }
+                }
+
+                toggle-ta := TouchArea {
+                    enabled: root.file-exists;
+                    mouse-cursor: pointer;
+                    clicked => { if (root.file-exists) { root.remove-file = !root.remove-file; } }
+                }
+            }
+
+            Rectangle { vertical-stretch: 1; min-height: 10px; }
+
+            HorizontalLayout {
+                spacing: 8px;
+                cross-axis-alignment: center;
+
+                Label {
+                    text: root.remove-file ? "The file will be deleted permanently." : "";
+                    size: 9.5px;
+                    tone: Tokens.red;
+                    horizontal-stretch: 1;
+                }
+                GhostButton { text: "Cancel"; clicked => { root.cancel(); } }
+                Rectangle {
+                    width: 86px;
+                    height: 32px;
+                    horizontal-stretch: 0;
+                    border-radius: 7px;
+                    background: delete-ta.has-hover ? #FF8294 : Tokens.red;
+
+                    Label {
+                        width: parent.width;
+                        height: parent.height;
+                        text: "Remove";
+                        size: 11.5px;
+                        weight: 600;
+                        tone: #17070C;
+                        align: center;
+                    }
+
+                    delete-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.confirm(root.remove-file); }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    in-out property <string> url-input: "";
+    in-out property <[TaskRow]> tasks;
+    in-out property <int> selected-format: 1;
+    in-out property <string> dest-dir: "";
+    in-out property <int> restart-secs: 10;
+    in-out property <bool> auto-start: true;
+    in-out property <int> selected-id: -1;
+    in-out property <bool> pulse: false;
+    in-out property <bool> activity-open: false;
+    in-out property <string> log-text: "";
+    in-out property <string> status-line: "";
+    in-out property <bool> bridge-ok: false;
+    in-out property <string> bridge-address: "127.0.0.1:37811";
+    in-out property <string> extension-path: "";
+    in-out property <int> received: 0;
+    in-out property <string> received-text: "0 links received";
+    in-out property <int> active-count: 0;
+    in-out property <int> pending-count: 0;
+    in-out property <int> finished-count: 0;
+    in-out property <string> summary: "No streams yet";
+    in-out property <bool> setup-open: false;
+    in-out property <string> toast-text: "";
+    in-out property <bool> toast-visible: false;
+    in-out property <bool> remove-open: false;
+    in-out property <int> remove-id: -1;
+    in-out property <string> remove-title: "";
+    in-out property <string> remove-file-name: "";
+    in-out property <bool> remove-file-exists: false;
+    in-out property <bool> remove-file: false;
+
+    callback add-url(string);
+    callback select-task(int);
+    callback start-task(int);
+    callback stop-task(int);
+    callback remove-task(int, bool);
+    callback open-task(int);
+    callback start-all();
+    callback stop-all();
+    callback clear-finished();
+    callback browse-destination();
+    callback open-destination();
+    callback format-changed(int);
+    callback restart-changed(int);
+    callback auto-start-changed(bool);
+    callback toggle-activity();
+    callback clear-log();
+    callback open-setup();
+    callback close-setup();
+    callback open-extension-folder();
+    callback copy-bridge();
+
+    title: "m3u8 studio";
+    icon: @image-url("../extension/icons/icon128.png");
+    preferred-width: 1210px;
+    preferred-height: 800px;
+    min-width: 980px;
+    min-height: 700px;
+    background: Tokens.bg;
+    default-font-family: Tokens.font;
+    forward-focus: url-field;
+
+    init => {
+        Palette.color-scheme = ColorScheme.dark;
+    }
+
+    HorizontalLayout {
+        spacing: 0px;
+
+        Sidebar {
+            selected-format: root.selected-format;
+            dest-dir: root.dest-dir;
+            restart-secs: root.restart-secs;
+            auto-start: root.auto-start;
+            bridge-ok: root.bridge-ok;
+            bridge-address: root.bridge-address;
+            received: root.received;
+            received-text: root.received-text;
+
+            format-changed(i) => { root.format-changed(i); }
+            browse-destination => { root.browse-destination(); }
+            restart-changed(v) => { root.restart-changed(v); }
+            auto-start-changed(v) => { root.auto-start-changed(v); }
+            open-setup => { root.open-setup(); }
+            copy-address => { root.copy-bridge(); }
+        }
+
+        main-area := Rectangle {
+            background: Tokens.bg;
+            horizontal-stretch: 1;
+
+            VerticalLayout {
+                spacing: 0px;
+
+                // ------------------------------------------------------ header
+                HorizontalLayout {
+                    padding-left: 24px;
+                    padding-right: 20px;
+                    padding-top: 18px;
+                    padding-bottom: 12px;
+                    spacing: 8px;
+                    cross-axis-alignment: center;
+
+                    VerticalLayout {
+                        spacing: 2px;
+                        horizontal-stretch: 1;
+                        Label { text: "Downloads"; size: 20px; weight: 600; }
+                        Label { text: root.summary; size: 11px; tone: Tokens.dim; }
+                    }
+
+                    GhostButton {
+                        text: "Open folder";
+                        icon: Icons.folder;
+                        clicked => { root.open-destination(); }
+                    }
+                    GhostButton {
+                        text: "Stop all";
+                        icon: Icons.stop;
+                        enabled: root.active-count > 0;
+                        clicked => { root.stop-all(); }
+                    }
+                    GhostButton {
+                        text: "Start all";
+                        icon: Icons.play;
+                        enabled: root.pending-count > 0;
+                        clicked => { root.start-all(); }
+                    }
+                }
+
+                // --------------------------------------------------- add a url
+                HorizontalLayout {
+                    padding-left: 24px;
+                    padding-right: 20px;
+
+                    Rectangle {
+                        height: 44px;
+                        horizontal-stretch: 1;
+                        border-radius: 10px;
+                        background: Tokens.panel;
+                        border-width: 1px;
+                        border-color: url-field.has-focus ? Tokens.accent-line : Tokens.border;
+                        animate border-color { duration: 160ms; }
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 6px;
+                            spacing: 8px;
+                            cross-axis-alignment: center;
+
+                            Glyph {
+                                width: 14px;
+                                height: 14px;
+                                shape: Icons.link;
+                                tint: url-field.has-focus ? Tokens.accent : Tokens.faint;
+                            }
+
+                            url-field := LineEdit {
+                                font-size: 11.5px;
+                                text <=> root.url-input;
+                                placeholder-text: "Paste an HLS playlist link  ( https://…/playlist.m3u8 )";
+                                accepted(t) => { root.add-url(t); }
+                                horizontal-stretch: 1;
+                            }
+
+                            Rectangle {
+                                width: 40px;
+                                height: 18px;
+                                border-radius: 4px;
+                                border-width: 1px;
+                                border-color: Tokens.border;
+                                background: #0F121A;
+                                Label {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    text: "ENTER";
+                                    size: 7.5px;
+                                    weight: 600;
+                                    tone: Tokens.faint;
+                                    align: center;
+                                    letter-spacing: 0.6px;
+                                }
+                            }
+
+                            PrimaryButton {
+                                text: "Add";
+                                icon: Icons.plus;
+                                enabled: !root.url-input.is-empty;
+                                clicked => { root.add-url(root.url-input); }
+                            }
+                        }
+                    }
+                }
+
+                Rectangle { height: 12px; }
+
+                // --------------------------------------------------- task list
+                if root.tasks.length == 0 : Rectangle {
+                    vertical-stretch: 1;
+                    EmptyState {
+                        setup => { root.open-setup(); }
+                    }
+                }
+
+                if root.tasks.length > 0 : Rectangle {
+                    vertical-stretch: 1;
+
+                    ScrollView {
+                        vertical-scrollbar-policy: ScrollBarPolicy.as-needed;
+
+                        VerticalLayout {
+                            padding-left: 24px;
+                            padding-right: 16px;
+                            padding-bottom: 12px;
+                            spacing: 8px;
+
+                            for row[i] in root.tasks : TaskCard {
+                                task: row;
+                                selected: row.id == root.selected-id;
+                                pulse: root.pulse;
+                                select => { root.select-task(row.id); }
+                                start => { root.start-task(row.id); }
+                                stop => { root.stop-task(row.id); }
+                                remove => {
+                                    root.remove-id = row.id;
+                                    root.remove-title = row.title;
+                                    root.remove-file-name = row.file-name;
+                                    root.remove-file-exists = row.can-open;
+                                    root.remove-file = row.can-open;
+                                    root.remove-open = true;
+                                }
+                                open => { root.open-task(row.id); }
+                            }
+                        }
+                    }
+                }
+
+                // ---------------------------------------------------- activity
+                if root.activity-open : ActivityPanel {
+                    log-text: root.log-text;
+                    close => { root.toggle-activity(); }
+                    clear => { root.clear-log(); }
+                }
+
+                // ------------------------------------------------------ footer
+                Rectangle {
+                    height: 34px;
+                    background: #0B0D13;
+
+                    Rectangle {
+                        y: 0;
+                        width: 100%;
+                        height: 1px;
+                        background: Tokens.border;
+                    }
+
+                    HorizontalLayout {
+                        padding-left: 24px;
+                        padding-right: 16px;
+                        spacing: 8px;
+                        cross-axis-alignment: center;
+
+                        Rectangle {
+                            width: 6px;
+                            height: 6px;
+                            border-radius: 3px;
+                            background: root.bridge-ok ? Tokens.green : Tokens.red;
+                        }
+                        Label {
+                            text: root.status-line;
+                            size: 10px;
+                            tone: Tokens.faint;
+                            elide: true;
+                            horizontal-stretch: 1;
+                        }
+                        if root.finished-count > 0 : TextButton {
+                            text: "Clear finished";
+                            clicked => { root.clear-finished(); }
+                        }
+                        TextButton {
+                            text: root.activity-open ? "Hide activity" : "Activity";
+                            clicked => { root.toggle-activity(); }
+                        }
+                    }
+                }
+            }
+
+            if root.toast-visible : Toast {
+                text: root.toast-text;
+                x: parent.width - self.width - 22px;
+                y: parent.height - 54px - (root.activity-open ? 158px : 0px);
+            }
+        }
+    }
+
+    if root.remove-open : RemoveDialog {
+        width: parent.width;
+        height: parent.height;
+        title: root.remove-title;
+        file-name: root.remove-file-name;
+        file-exists: root.remove-file-exists;
+        remove-file <=> root.remove-file;
+        cancel => { root.remove-open = false; }
+        confirm(with-file) => {
+            root.remove-open = false;
+            root.remove-task(root.remove-id, with-file);
+        }
+    }
+
+    if root.setup-open : SetupOverlay {
+        width: parent.width;
+        height: parent.height;
+        bridge-address: root.bridge-address;
+        extension-path: root.extension-path;
+        bridge-ok: root.bridge-ok;
+        close => { root.close-setup(); }
+        open-folder => { root.open-extension-folder(); }
+        copy-address => { root.copy-bridge(); }
+    }
+}
