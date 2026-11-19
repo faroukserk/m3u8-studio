@@ -137,6 +137,25 @@ pub fn copy_text(text: &str) -> bool {
     }
 }
 
+/// Open a link in the platform's default browser.
+pub fn open_url(url: &str) -> std::io::Result<()> {
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("cmd")
+            .args(["/C", "start", "\"\"", url])
+            .spawn()?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open").arg(url).spawn()?;
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        Command::new("xdg-open").arg(url).spawn()?;
+    }
+    Ok(())
+}
+
 /// Default output folder.
 pub fn default_dest() -> String {
     std::env::var("USERPROFILE")

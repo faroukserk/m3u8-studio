@@ -518,6 +518,16 @@ impl AppState {
         }
     }
 
+    fn open_kofi(&mut self) {
+        let url = "https://ko-fi.com/H4D12AXINB";
+        if let Err(e) = extension::open_url(url) {
+            self.log(format!("Could not open Ko-fi: {e}"));
+            self.toast("Couldn't open the Ko-fi page");
+        } else {
+            self.log("Opening the Ko-fi page in your browser.");
+        }
+    }
+
     fn copy_bridge(&mut self) {
         let address = format!("http://{}", self.bridge_address);
         if extension::copy_text(&address) {
@@ -1161,6 +1171,15 @@ fn wire(state: Rc<RefCell<AppState>>, ui: &AppWindow) {
         move || {
             if let Ok(mut s) = state.try_borrow_mut() {
                 s.open_extension_folder();
+            }
+        }
+    });
+
+    ui.on_open_kofi({
+        let state = state.clone();
+        move || {
+            if let Ok(mut s) = state.try_borrow_mut() {
+                s.open_kofi();
             }
         }
     });

@@ -98,7 +98,7 @@ responses include permissive CORS headers.
 
 | Method | Path | Result |
 | --- | --- | --- |
-| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.2.0"}` |
+| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.2.1"}` |
 | `GET` | `/status` | active/pending counts, auto-start flag, per-stream state |
 | `GET` | `/list` | URLs currently in the queue |
 | `POST` | `/add?url=…&title=…` | queue a stream; needs `X-M3U8-Studio: 1`; also accepts a JSON body |

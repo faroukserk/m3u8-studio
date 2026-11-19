@@ -583,6 +583,7 @@ export component AppWindow inherits Window {
     callback close-setup();
     callback open-extension-folder();
     callback copy-bridge();
+    callback open-kofi();
 
     title: "m3u8 studio";
     icon: @image-url("../extension/icons/icon128.png");
@@ -809,6 +810,12 @@ export component AppWindow inherits Window {
                         if root.finished-count > 0 : TextButton {
                             text: "Clear finished";
                             clicked => { root.clear-finished(); }
+                        }
+                        GhostButton {
+                            text: "Ko-fi";
+                            icon: Icons.heart;
+                            tone: #C89BFF;
+                            clicked => { root.open-kofi(); }
                         }
                         TextButton {
                             text: root.activity-open ? "Hide activity" : "Activity";
