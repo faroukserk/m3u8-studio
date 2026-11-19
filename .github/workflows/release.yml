@@ -189,4 +189,5 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh release upload "$GITHUB_REF_NAME" *.crx *.xpi --clobber
+          gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag *.crx *.xpi \
+            || gh release upload "$GITHUB_REF_NAME" *.crx *.xpi --clobber
