@@ -58,8 +58,9 @@ uses thin LTO and strips symbols.
 ## Downloads and releases
 
 Pushing a `v*` tag (for example `v1.2.1`) runs
-`.github/workflows/release.yml`, which builds archives for **Linux x86_64**,
-**macOS arm64** and **macOS x86_64** and attaches them to the GitHub Release.
+`.github/workflows/release.yml`, which builds archives for **Windows x86_64**
+(`.zip`), **Linux x86_64**, **macOS arm64** and **macOS x86_64** (`.tar.gz`)
+and attaches them to the GitHub Release.
 You can also run the workflow manually from the Actions tab; manual runs upload
 the archives as build artifacts without creating a release.
 

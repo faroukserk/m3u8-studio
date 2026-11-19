@@ -24,12 +24,19 @@ jobs:
           - os: ubuntu-latest
             label: linux-x86_64
             target: linux-x86_64
+            archive: tar.gz
           - os: macos-latest
             label: macos-arm64
             target: macos-arm64
+            archive: tar.gz
           - os: macos-15-intel
             label: macos-x86_64
             target: macos-x86_64
+            archive: tar.gz
+          - os: windows-latest
+            label: windows-x86_64
+            target: windows-x86_64
+            archive: zip
 
     steps:
       - name: Checkout
@@ -56,7 +63,8 @@ jobs:
       - name: Build release binary
         run: cargo build --release --locked
 
-      - name: Package archive
+      - name: Package archive (tar.gz)
+        if: matrix.archive == 'tar.gz'
         shell: bash
         run: |
           set -euo pipefail
@@ -70,6 +78,20 @@ jobs:
           cp -R extension "dist/${name}/extension"
           tar -czf "${name}.tar.gz" -C dist "${name}"
           echo "ASSET=${name}.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Package archive (zip)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "manual" }
+          $name = "m3u8-studio-$version-${{ matrix.target }}"
+          $stage = Join-Path "dist" $name
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "target/release/m3u8-studio.exe" $stage
+          Copy-Item "README.md", "LICENSE" $stage
+          Copy-Item -Recurse "extension" (Join-Path $stage "extension")
+          Compress-Archive -Path $stage -DestinationPath "$name.zip"
+          "ASSET=$name.zip" >> $env:GITHUB_ENV
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4

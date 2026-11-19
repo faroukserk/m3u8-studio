@@ -141,8 +141,10 @@ pub fn copy_text(text: &str) -> bool {
 pub fn open_url(url: &str) -> std::io::Result<()> {
     #[cfg(target_os = "windows")]
     {
-        Command::new("cmd")
-            .args(["/C", "start", "\"\"", url])
+        // `cmd /c start` needs a console, which a GUI app doesn't have.
+        // rundll32 opens the default browser without one.
+        Command::new("rundll32")
+            .args(["url.dll,FileProtocolHandler", url])
             .spawn()?;
     }
     #[cfg(target_os = "macos")]
