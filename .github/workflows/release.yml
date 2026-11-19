@@ -17,9 +17,6 @@ jobs:
   build:
     name: ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
-    env:
-      # fontconfig is loaded at runtime; avoids cross-compiled pkg-config.
-      RUST_FONTCONFIG_DLOPEN: "1"
     strategy:
       fail-fast: false
       matrix:

@@ -23,6 +23,8 @@ rfd = "0.15"
 [target.'cfg(target_env = "musl")'.dependencies]
 # native-tls uses OpenSSL; build it statically so the musl binary is portable.
 openssl = { version = "0.10", features = ["vendored"] }
+# Slint's font stack: load fontconfig at runtime instead of pkg-config linking.
+fontique = { version = "0.12", features = ["fontconfig-dlopen"] }
 
 [build-dependencies]
 slint-build = "1.18"

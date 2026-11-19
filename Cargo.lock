@@ -2623,6 +2623,7 @@ dependencies = [
  "aes",
  "cbc",
  "cipher",
+ "fontique",
  "hex",
  "openssl",
  "reqwest",
