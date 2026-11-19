@@ -8,13 +8,19 @@ bridge (`http://127.0.0.1:37811`).
 
 1. Start `m3u8-studio.exe`. It unpacks this folder next to itself on first run
    (the app's sidebar shows the exact path — *Extension setup → Open folder*).
-2. Open `chrome://extensions` (or `edge://extensions`).
-3. Enable **Developer mode**.
-4. Click **Load unpacked** and pick the `extension` folder that opened.
-5. Pin the extension to the toolbar.
+2. Load the folder in your browser:
+   - **Chrome / Edge:** `chrome://extensions` → Developer mode → Load unpacked.
+   - **Firefox:** `about:debugging#/runtime/this-firefox` → Load Temporary
+     Add-on → select `manifest.json` in the folder.
+   - **Safari:** Develop → Allow Unsigned Extensions, then Develop → Show
+     Extension Inspector → Load Extension → select the folder. For an App Store
+     build run `xcrun safari-web-extension-converter <extension folder>`.
+3. Pin the extension to the toolbar.
 
 The extension needs no account, no remote server, and no extra permissions
-beyond reading page media requests.
+beyond reading page media requests. It uses one MV3 manifest for all browsers;
+Chrome 121+ is required because older Chromium refuses the `background.scripts`
+key that Firefox and Safari need.
 
 ## Use
 
@@ -34,8 +40,10 @@ beyond reading page media requests.
 | DOM scan (`content.js`) | `<a href>`, `<video>`/`<source>`, `data-src` attributes and manifest URLs printed into the page |
 | `PerformanceResourceTiming` | Manifests fetched before the content script woke up |
 
-Results are stored per tab in `chrome.storage.session` and cleared when the tab
-closes.
+Results are stored per tab in `storage.session` (or `storage.local` on older
+engines) and cleared when the tab closes. The `api.js` shim lets the same files
+run on Chromium's callback-style `chrome.*`, Firefox/Safari's promise-based
+`browser.*`, and both service-worker and event-page backgrounds.
 
 ## Bridge endpoints
 
@@ -57,4 +65,6 @@ headers. CORS is open so the popup can call it directly.
   players only request the manifest after a click. DRM-protected streams
   (Widevine/FairPlay) cannot be downloaded.
 - **Reloading the extension** — after updating the app, click *Reload* on
-  `chrome://extensions` so the bundled files are refreshed.
+  `chrome://extensions`, or re-load the temporary add-on in Firefox/Safari, so
+  the bundled files are refreshed. The app writes a fresh copy whenever its
+  version changes.

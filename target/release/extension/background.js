@@ -1,4 +1,4 @@
-// Background service worker for m3u8 studio.
+// Background worker / event page for m3u8 studio.
 //
 // * Observes network requests and remembers every HLS playlist a tab loads
 //   (works even when the player feeds a <video> from a blob: URL).
@@ -7,6 +7,16 @@
 
 const BRIDGE = "http://127.0.0.1:37811";
 const MAX_PER_TAB = 24;
+
+// Chrome runs this as a service worker (load the shim explicitly); Firefox and
+// Safari load api.js from the manifest's background.scripts list.
+if (typeof importScripts === "function") {
+  try { importScripts("api.js"); } catch (_) {}
+}
+
+const ignore = (promise) => {
+  if (promise && typeof promise.catch === "function") promise.catch(() => {});
+};
 
 // ---------------------------------------------------------------- helpers
 
@@ -25,17 +35,17 @@ const serial = (fn) => {
 
 async function getDetected(tabId) {
   const key = keyFor(tabId);
-  const data = await chrome.storage.session.get(key);
+  const data = await EXT.session.get(key);
   return Array.isArray(data[key]) ? data[key] : [];
 }
 
 function setBadge(tabId, count) {
   if (tabId == null || tabId < 0) return;
   const text = count <= 0 ? "" : count > 9 ? "9+" : String(count);
-  chrome.action.setBadgeText({ tabId, text }).catch(() => {});
-  chrome.action.setBadgeBackgroundColor({ tabId, color: "#7C8CFF" }).catch(() => {});
-  if (chrome.action.setBadgeTextColor) {
-    chrome.action.setBadgeTextColor({ tabId, color: "#0A0D14" }).catch(() => {});
+  ignore(EXT.action.setBadgeText({ tabId, text }));
+  ignore(EXT.action.setBadgeBackgroundColor({ tabId, color: "#7C8CFF" }));
+  if (EXT.action.setBadgeTextColor) {
+    ignore(EXT.action.setBadgeTextColor({ tabId, color: "#0A0D14" }));
   }
 }
 
@@ -47,33 +57,33 @@ async function addDetection(tabId, url, source = "network", titleHint = "") {
     if (existing) {
       if (titleHint && !existing.title) {
         existing.title = titleHint;
-        await chrome.storage.session.set({ [keyFor(tabId)]: list });
+        await EXT.session.set({ [keyFor(tabId)]: list });
       }
       return;
     }
     let title = titleHint || "";
     if (!title) {
       try {
-        const tab = await chrome.tabs.get(tabId);
+        const tab = await EXT.tabs.get(tabId);
         title = tab && tab.title ? tab.title : "";
       } catch (_) {}
     }
     list.unshift({ url, ts: Date.now(), title, source });
     const trimmed = list.slice(0, MAX_PER_TAB);
-    await chrome.storage.session.set({ [keyFor(tabId)]: trimmed });
+    await EXT.session.set({ [keyFor(tabId)]: trimmed });
     setBadge(tabId, trimmed.length);
   });
 }
 
 async function scanTab(tabId) {
   try {
-    const res = await chrome.tabs.sendMessage(tabId, { type: "rescan" });
+    const res = await EXT.tabs.sendMessage(tabId, { type: "rescan" });
     if (res && Array.isArray(res.urls)) return res.urls;
   } catch (_) {}
 
   // Fallback for pages opened before the extension was installed/reloaded.
   try {
-    const injections = await chrome.scripting.executeScript({
+    const injections = await EXT.scripting.executeScript({
       target: { tabId, allFrames: true },
       func: () => {
         const re = /\.m3u8?(\?|#|$)/i;
@@ -164,30 +174,33 @@ async function sendItems(items, pageTitle) {
 
 // ------------------------------------------------------------- detection
 
-chrome.webRequest.onBeforeRequest.addListener(
-  (details) => {
-    if (details.tabId >= 0 && looksHls(details.url)) {
-      addDetection(details.tabId, details.url, "network");
-    }
-  },
-  {
-    urls: ["*://*/*"],
-    types: ["media", "xmlhttprequest", "other", "object", "main_frame"],
-  },
-  []
-);
+// Safari on iOS has no webRequest; DOM/performance scanning still covers it.
+if (EXT.webRequest && EXT.webRequest.onBeforeRequest) {
+  EXT.webRequest.onBeforeRequest.addListener(
+    (details) => {
+      if (details.tabId >= 0 && looksHls(details.url)) {
+        addDetection(details.tabId, details.url, "network");
+      }
+    },
+    {
+      urls: ["*://*/*"],
+      types: ["media", "xmlhttprequest", "other", "object", "main_frame"],
+    },
+    []
+  );
+}
 
-chrome.tabs.onRemoved.addListener((tabId) => {
-  chrome.storage.session.remove(keyFor(tabId)).catch(() => {});
+EXT.tabs.onRemoved.addListener((tabId) => {
+  ignore(EXT.session.remove(keyFor(tabId)));
 });
 
-chrome.tabs.onActivated.addListener(({ tabId }) => {
+EXT.tabs.onActivated.addListener(({ tabId }) => {
   getDetected(tabId)
     .then((items) => setBadge(tabId, items.length))
     .catch(() => {});
 });
 
-chrome.tabs.onUpdated.addListener((tabId, info) => {
+EXT.tabs.onUpdated.addListener((tabId, info) => {
   if (!info.status) return;
   getDetected(tabId)
     .then((items) => setBadge(tabId, items.length))
@@ -197,22 +210,28 @@ chrome.tabs.onUpdated.addListener((tabId, info) => {
 // ------------------------------------------------------------- menus
 
 function createMenus() {
-  chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create(
-      {
+  ignore(EXT.contextMenus.removeAll());
+  try {
+    ignore(
+      EXT.contextMenus.create({
         id: "send-stream",
         title: "Send to m3u8 studio",
         contexts: ["link", "video", "audio", "page", "selection"],
-      },
-      () => void chrome.runtime.lastError
+      })
     );
-  });
+  } catch (_) {}
 }
 
-chrome.runtime.onInstalled.addListener(createMenus);
-chrome.runtime.onStartup.addListener(createMenus);
+function onBrowserStart() {
+  createMenus();
+  // With the storage.local fallback, don't carry detections across restarts.
+  if (EXT.useLocalFallback) ignore(EXT.session.clear());
+}
 
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+EXT.runtime.onInstalled.addListener(onBrowserStart);
+EXT.runtime.onStartup.addListener(onBrowserStart);
+
+EXT.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId !== "send-stream" || !tab) return;
 
   const candidates = [
@@ -236,7 +255,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
 // ------------------------------------------------------------- messaging
 
-chrome.runtime.onMessage.addListener((message, sender, respond) => {
+EXT.runtime.onMessage.addListener((message, sender, respond) => {
   if (!message || !message.type) return;
 
   if (message.type === "ping") {
@@ -298,7 +317,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
   }
 
   if (message.type === "clear") {
-    chrome.storage.session
+    EXT.session
       .remove(keyFor(message.tabId))
       .then(() => {
         setBadge(message.tabId, 0);

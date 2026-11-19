@@ -86,7 +86,7 @@
     if (signature === lastPayload) return;
     lastPayload = signature;
 
-    chrome.runtime.sendMessage({
+    EXT.runtime.sendMessage({
       type: "scanned",
       urls,
       title: document.title || "",
@@ -127,7 +127,7 @@
     setTimeout(report, 5000);
   };
 
-  chrome.runtime.onMessage.addListener((message, _sender, respond) => {
+  EXT.runtime.onMessage.addListener((message, _sender, respond) => {
     if (message && message.type === "rescan") {
       lastPayload = "";
       const urls = [...new Set([...scanDom(), ...scanPerformance()])].slice(0, 40);

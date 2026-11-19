@@ -91,13 +91,15 @@ jobs:
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME:-manual}"
+          pkg_version="${version#v}"
           name="m3u8-studio-${version}-${{ matrix.target }}"
           mkdir -p "dist/${name}"
           cp "target/${{ matrix.rust_target }}/release/${{ matrix.binary }}" "dist/${name}/"
           cp README.md LICENSE "dist/${name}/"
-          # The files are embedded in the binary, but shipping them as a folder
-          # lets people load the extension manually if the app can't unpack it.
+          # Ship the extension ready-to-load, with a matching version stamp so
+          # the app doesn't need to rewrite it in a read-only install folder.
           cp -R extension "dist/${name}/extension"
+          printf '%s' "$pkg_version" > "dist/${name}/extension/.installed-version"
           tar -czf "${name}.tar.gz" -C dist "${name}"
           echo "ASSET=${name}.tar.gz" >> "$GITHUB_ENV"
 
@@ -106,12 +108,14 @@ jobs:
         shell: pwsh
         run: |
           $version = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "manual" }
+          $pkgVersion = $version.TrimStart('v')
           $name = "m3u8-studio-$version-${{ matrix.target }}"
           $stage = Join-Path "dist" $name
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
           Copy-Item "target/${{ matrix.rust_target }}/release/${{ matrix.binary }}" $stage
           Copy-Item "README.md", "LICENSE" $stage
           Copy-Item -Recurse "extension" (Join-Path $stage "extension")
+          Set-Content -NoNewline -Path (Join-Path $stage "extension\.installed-version") -Value $pkgVersion
           Compress-Archive -Path $stage -DestinationPath "$name.zip"
           "ASSET=$name.zip" >> $env:GITHUB_ENV
 
@@ -131,3 +135,58 @@ jobs:
           set -euo pipefail
           gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag "$ASSET" \
             || gh release upload "$GITHUB_REF_NAME" "$ASSET" --clobber
+
+  extension:
+    name: browser-extension (CRX + XPI)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Stamp extension version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME:-manual}"
+          printf '%s' "${version#v}" > extension/.installed-version
+
+      - name: Restore CRX signing key
+        env:
+          CRX_KEY: ${{ secrets.M3U8_CRX_KEY }}
+        shell: bash
+        run: printf '%s' "$CRX_KEY" > /tmp/m3u8-studio.crx.pem
+
+      - name: Build CRX (Chrome/Edge)
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME:-manual}"
+          npx --yes crx3@2.0.0 -o "m3u8-studio-${version}-extension.crx" \
+            -p /tmp/m3u8-studio.crx.pem extension
+          ls -lh *.crx
+
+      - name: Build XPI (Firefox)
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME:-manual}"
+          (cd extension && zip -r "../m3u8-studio-${version}-extension.xpi" .)
+          ls -lh *.xpi
+
+      - name: Upload extension artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-extension
+          path: |
+            *.crx
+            *.xpi
+          if-no-files-found: error
+
+      - name: Attach extensions to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$GITHUB_REF_NAME" *.crx *.xpi --clobber
