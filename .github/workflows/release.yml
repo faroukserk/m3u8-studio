@@ -170,7 +170,12 @@ jobs:
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME:-manual}"
-          (cd extension && zip -r "../m3u8-studio-${version}-extension.xpi" .)
+          rm -rf /tmp/m3u8-firefox-extension
+          cp -R extension /tmp/m3u8-firefox-extension
+          # Firefox/Safari use an event page, not Chrome's service worker.
+          cp manifest.firefox.json /tmp/m3u8-firefox-extension/manifest.json
+          printf '%s' "${version#v}" > /tmp/m3u8-firefox-extension/.installed-version
+          (cd /tmp/m3u8-firefox-extension && zip -r "$GITHUB_WORKSPACE/m3u8-studio-${version}-extension.xpi" .)
           ls -lh *.xpi
 
       - name: Upload extension artifacts

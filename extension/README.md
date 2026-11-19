@@ -42,8 +42,19 @@ key that Firefox and Safari need.
 
 Results are stored per tab in `storage.session` (or `storage.local` on older
 engines) and cleared when the tab closes. The `api.js` shim lets the same files
-run on Chromium's callback-style `chrome.*`, Firefox/Safari's promise-based
-`browser.*`, and both service-worker and event-page backgrounds.
+run on Chromium's callback-style `chrome.*` and Firefox/Safari's promise-based
+`browser.*`.
+
+There are two manifests:
+
+- `manifest.json` — pure MV3 for **Chrome/Edge**: `background.service_worker`
+  only (no `background.scripts` or `persistent`, which Chrome MV3 rejects).
+- `manifest.firefox.json` — MV3 for **Firefox/Safari**: `background.scripts`
+  event page. The XPI release swaps this in as `manifest.json`.
+
+The desktop app unpacks both files; if you want to load the unpacked folder in
+Firefox/Safari, copy `manifest.firefox.json` over `manifest.json` first (or just
+install the provided `.xpi`).
 
 ## Bridge endpoints
 

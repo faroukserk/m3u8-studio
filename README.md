@@ -84,11 +84,14 @@ executable on first launch, so keep the binary in a writable folder.
    the exact path.
 2. Load that folder in your browser:
    - **Chrome / Edge:** `chrome://extensions` → Developer mode → Load unpacked.
-   - **Firefox:** `about:debugging#/runtime/this-firefox` → Load Temporary Add-on
-     → select `manifest.json` in the `extension` folder.
-   - **Safari:** Develop → Allow Unsigned Extensions, then Develop → Show
-     Extension Inspector → Load Extension → select the `extension` folder.
-     For an App Store build, convert it with
+   - **Firefox:** install the `.xpi` from the release page, or in
+     `about:debugging#/runtime/this-firefox` choose Load Temporary Add-on and
+     select `manifest.firefox.json` (renamed to `manifest.json` in a copy of the
+     folder). The unpacked folder's default `manifest.json` is Chrome MV3.
+   - **Safari:** install the `.xpi` equivalent, or Develop → Allow Unsigned
+     Extensions → Develop → Show Extension Inspector → Load Extension → select
+     the folder after swapping in `manifest.firefox.json`. For an App Store
+     build, convert it with
      `xcrun safari-web-extension-converter <extension folder>`.
 3. Play a video and click the toolbar icon.
 
@@ -110,7 +113,7 @@ responses include permissive CORS headers.
 
 | Method | Path | Result |
 | --- | --- | --- |
-| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.2.5"}` |
+| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.2.7"}` |
 | `GET` | `/status` | active/pending counts, auto-start flag, per-stream state |
 | `GET` | `/list` | URLs currently in the queue |
 | `POST` | `/add?url=…&title=…` | queue a stream; needs `X-M3U8-Studio: 1`; also accepts a JSON body |
