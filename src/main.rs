@@ -1236,6 +1236,15 @@ fn wire(state: Rc<RefCell<AppState>>, ui: &AppWindow) {
         }
     });
 
+    ui.on_minimize_to_tray({
+        let state = state.clone();
+        move || {
+            if let Some(ui) = state.borrow().ui() {
+                let _ = ui.window().hide();
+            }
+        }
+    });
+
     ui.on_copy_bridge({
         let state = state.clone();
         move || {
@@ -1252,6 +1261,36 @@ fn wire(state: Rc<RefCell<AppState>>, ui: &AppWindow) {
 
 fn main() -> Result<(), slint::PlatformError> {
     let ui = AppWindow::new()?;
+
+    // Keep the app alive in the system tray when the window is hidden.
+    let tray = TrayIcon::new().ok();
+    let has_tray = tray.is_some();
+
+    if let Some(tray) = &tray {
+        let weak = ui.as_weak();
+        tray.on_show_window(move || {
+            if let Some(ui) = weak.upgrade() {
+                let window = ui.window();
+                window.set_minimized(false);
+                let _ = window.show();
+            }
+        });
+        tray.on_quit_app(move || {
+            let _ = slint::quit_event_loop();
+        });
+    }
+
+    {
+        let weak = ui.as_weak();
+        ui.window().on_close_requested(move || {
+            if has_tray {
+                if let Some(ui) = weak.upgrade() {
+                    let _ = ui.window().hide();
+                }
+            }
+            slint::CloseRequestResponse::HideWindow
+        });
+    }
 
     let settings = load_settings();
     let extension_dir = extension::ensure_installed();

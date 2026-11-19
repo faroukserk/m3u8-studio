@@ -11,6 +11,7 @@ import {
     TextButton,
     TaskCard,
 } from "widgets.slint";
+export { TrayIcon } from "tray.slint";
 
 component EmptyState inherits Rectangle {
     callback setup();
@@ -584,6 +585,7 @@ export component AppWindow inherits Window {
     callback open-extension-folder();
     callback copy-bridge();
     callback open-kofi();
+    callback minimize-to-tray();
 
     title: "m3u8 studio";
     icon: @image-url("../extension/icons/icon128.png");
@@ -597,6 +599,13 @@ export component AppWindow inherits Window {
 
     init => {
         Palette.color-scheme = ColorScheme.dark;
+    }
+
+    // Minimize goes to the tray instead of leaving an icon on the taskbar.
+    changed minimized => {
+        if (root.minimized) {
+            root.minimize-to-tray();
+        }
     }
 
     HorizontalLayout {

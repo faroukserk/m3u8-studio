@@ -22,6 +22,8 @@ playlist → first variant → AES-128 key → segment CBC decrypt → append to
 
 - **Dark, quiet UI** — 270 px settings rail, stream cards with live progress,
   collapsible activity log, toast notifications.
+- **System tray** — minimizing or closing the window hides the app into the
+  tray; click the icon or use its menu to show the window or quit.
 - **Formats** — MKV, MP4, MOV, TS, WebM (the segments are written as-is; the
   extension mostly names the container you plan to remux into).
 - **Master playlists** — picks the first variant automatically.
@@ -103,7 +105,7 @@ responses include permissive CORS headers.
 
 | Method | Path | Result |
 | --- | --- | --- |
-| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.2.3"}` |
+| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.2.4"}` |
 | `GET` | `/status` | active/pending counts, auto-start flag, per-stream state |
 | `GET` | `/list` | URLs currently in the queue |
 | `POST` | `/add?url=…&title=…` | queue a stream; needs `X-M3U8-Studio: 1`; also accepts a JSON body |

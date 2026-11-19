@@ -1,0 +1,23 @@
+// System tray entry. Must stay rooted in SystemTrayIcon.
+export component TrayIcon inherits SystemTrayIcon {
+    icon: @image-url("../extension/icons/icon32.png");
+    title: "m3u8 studio";
+    tooltip: "m3u8 studio — HLS downloader";
+    visible: true;
+
+    callback show-window();
+    callback quit-app();
+
+    clicked => { root.show-window(); }
+
+    Menu {
+        MenuItem {
+            title: "Show m3u8 studio";
+            activated => { root.show-window(); }
+        }
+        MenuItem {
+            title: "Quit";
+            activated => { root.quit-app(); }
+        }
+    }
+}
