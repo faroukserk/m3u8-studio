@@ -51,6 +51,22 @@ cargo run
 The first build compiles Slint, which takes a few minutes. The release profile
 uses thin LTO and strips symbols.
 
+## Downloads and releases
+
+Pushing a `v*` tag (for example `v1.2.1`) runs
+`.github/workflows/release.yml`, which builds archives for **Linux x86_64**,
+**macOS arm64** and **macOS x86_64** and attaches them to the GitHub Release.
+You can also run the workflow manually from the Actions tab; manual runs upload
+the archives as build artifacts without creating a release.
+
+Each archive contains the executable, this README, the license and the
+extension folder. The app also unpacks its embedded extension next to the
+executable on first launch, so keep the binary in a writable folder.
+
+- **Linux:** needs a desktop session with OpenGL and X11 or Wayland at runtime.
+- **macOS:** binaries are ad-hoc unsigned. If Gatekeeper blocks one, run
+  `xattr -d com.apple.quarantine ./m3u8-studio` after extracting.
+
 ## Using the browser extension
 
 1. Start the app. It writes the extension to `<exe folder>\extension\` and logs
