@@ -12,11 +12,15 @@ There is no ffmpeg dependency and no re-encoding.
 playlist → first variant → AES-128 key → segment CBC decrypt → append to output
 ```
 
+> If this project saved you some time:
+>
+> [![Support me on Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20me%20on%20Ko--fi-ac73f5?logo=ko-fi&logoColor=white)](https://ko-fi.com/faroukserkini)
+
 ---
 
 ## Highlights
 
-- **Dark, quiet UI** — 286 px settings rail, stream cards with live progress,
+- **Dark, quiet UI** — 270 px settings rail, stream cards with live progress,
   collapsible activity log, toast notifications.
 - **Formats** — MKV, MP4, MOV, TS, WebM (the segments are written as-is; the
   extension mostly names the container you plan to remux into).
