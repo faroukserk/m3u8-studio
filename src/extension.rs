@@ -8,6 +8,7 @@ use std::process::Command;
 
 const TEXT_FILES: &[(&str, &str)] = &[
     ("manifest.json", include_str!("../extension/manifest.json")),
+    ("api.js", include_str!("../extension/api.js")),
     ("background.js", include_str!("../extension/background.js")),
     ("content.js", include_str!("../extension/content.js")),
     ("popup.html", include_str!("../extension/popup.html")),

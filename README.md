@@ -82,10 +82,15 @@ executable on first launch, so keep the binary in a writable folder.
 
 1. Start the app. It writes the extension to `<exe folder>\extension\` and logs
    the exact path.
-2. Open `chrome://extensions` (or `edge://extensions`).
-3. Enable **Developer mode** → **Load unpacked** → select that `extension`
-   folder.
-4. Play a video and click the toolbar icon.
+2. Load that folder in your browser:
+   - **Chrome / Edge:** `chrome://extensions` → Developer mode → Load unpacked.
+   - **Firefox:** `about:debugging#/runtime/this-firefox` → Load Temporary Add-on
+     → select `manifest.json` in the `extension` folder.
+   - **Safari:** Develop → Allow Unsigned Extensions, then Develop → Show
+     Extension Inspector → Load Extension → select the `extension` folder.
+     For an App Store build, convert it with
+     `xcrun safari-web-extension-converter <extension folder>`.
+3. Play a video and click the toolbar icon.
 
 Detected manifests appear newest-first. **Send stream** / **Send all** queue
 them; with *Auto-download from browser* enabled (default) the download starts
@@ -105,7 +110,7 @@ responses include permissive CORS headers.
 
 | Method | Path | Result |
 | --- | --- | --- |
-| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.2.4"}` |
+| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.2.5"}` |
 | `GET` | `/status` | active/pending counts, auto-start flag, per-stream state |
 | `GET` | `/list` | URLs currently in the queue |
 | `POST` | `/add?url=…&title=…` | queue a stream; needs `X-M3U8-Studio: 1`; also accepts a JSON body |

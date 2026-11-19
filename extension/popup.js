@@ -26,17 +26,15 @@ let pollTimer = 0;
 
 // --------------------------------------------------------------- utilities
 
-const message = (payload) =>
-  new Promise((resolve) => {
-    try {
-      chrome.runtime.sendMessage(payload, (response) => {
-        void chrome.runtime.lastError;
-        resolve(response || null);
-      });
-    } catch (_) {
-      resolve(null);
-    }
-  });
+async function message(payload) {
+  try {
+    // Chromium and Firefox/Safari both return a promise when no callback is
+    // passed (MV3 chrome.* promises / browser.* promises).
+    return (await EXT.runtime.sendMessage(payload)) || null;
+  } catch (_) {
+    return null;
+  }
+}
 
 function hostOf(url) {
   try {
@@ -290,7 +288,7 @@ async function loadDetected() {
 }
 
 async function boot() {
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tabs = await EXT.tabs.query({ active: true, currentWindow: true });
   tab = tabs && tabs[0] ? tabs[0] : null;
 
   if (tab) {
