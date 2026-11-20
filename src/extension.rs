@@ -1,10 +1,20 @@
 //! The browser extension ships inside the executable: on first launch (or when
-//! the version changes) it is unpacked to `<exe dir>/extension/` so it can be
+//! the version changes) it is unpacked to `<home>/extension/` so it can be
 //! loaded directly from chrome://extensions without hunting for source files.
+//!
+//! `<home>` is the folder holding the executable whenever that folder is
+//! writable (portable folder and the per-user Inno Setup install), so settings,
+//! downloads and the extension all stay inside one self-contained directory.
+//! Only when the executable lives somewhere read-only (Program Files) does the
+//! app fall back to the per-user config folder.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::OnceLock;
+
+/// Folder name used for the per-user fallback under APPDATA/XDG_CONFIG_HOME.
+const APP_DIR_NAME: &str = "m3u8-studio";
 
 const TEXT_FILES: &[(&str, &str)] = &[
     ("manifest.json", include_str!("../extension/manifest.json")),
@@ -25,10 +35,53 @@ const ICON_FILES: &[(&str, &[u8])] = &[
     ("icons/icon128.png", include_bytes!("../extension/icons/icon128.png")),
 ];
 
-/// Unpack (or refresh) the extension next to the executable.
+/// Check that a folder can be created and written to.
+fn is_writable(dir: &Path) -> bool {
+    if std::fs::create_dir_all(dir).is_err() {
+        return false;
+    }
+    let probe = dir.join(".m3u8-write-test");
+    match std::fs::write(&probe, b"") {
+        Ok(()) => {
+            let _ = std::fs::remove_file(&probe);
+            true
+        }
+        Err(_) => false,
+    }
+}
+
+/// The self-contained application folder: the executable's folder when it is
+/// writable, otherwise `<APPDATA>/m3u8-studio` (or the platform equivalent).
+pub fn app_home() -> Option<&'static Path> {
+    static HOME: OnceLock<Option<PathBuf>> = OnceLock::new();
+    HOME.get_or_init(|| {
+        if let Ok(custom) = std::env::var("M3U8_STUDIO_HOME") {
+            let dir = PathBuf::from(custom);
+            if is_writable(&dir) {
+                return Some(dir);
+            }
+        }
+        if let Some(dir) = std::env::current_exe()
+            .ok()
+            .and_then(|exe| exe.parent().map(Path::to_path_buf))
+        {
+            if is_writable(&dir) {
+                return Some(dir);
+            }
+        }
+        let base = std::env::var("APPDATA")
+            .ok()
+            .or_else(|| std::env::var("XDG_CONFIG_HOME").ok())
+            .or_else(|| std::env::var("HOME").ok().map(|h| format!("{h}/.config")))?;
+        let dir = PathBuf::from(base).join(APP_DIR_NAME);
+        is_writable(&dir).then_some(dir)
+    })
+    .as_deref()
+}
+
+/// Unpack (or refresh) the extension inside the app folder.
 pub fn ensure_installed() -> Option<PathBuf> {
-    let exe = std::env::current_exe().ok()?;
-    let dir = exe.parent()?.join("extension");
+    let dir = app_home()?.join("extension");
     std::fs::create_dir_all(dir.join("icons")).ok()?;
 
     let stamp = dir.join(".installed-version");
@@ -200,8 +253,12 @@ pub fn open_url(url: &str) -> std::io::Result<()> {
     Ok(())
 }
 
-/// Default output folder.
+/// Default output folder: `<home>/downloads` for a self-contained setup, or the
+/// user's Downloads folder when the app lives in a read-only location.
 pub fn default_dest() -> String {
+    if let Some(home) = app_home() {
+        return home.join("downloads").display().to_string();
+    }
     std::env::var("USERPROFILE")
         .map(|p| format!("{p}\\Downloads"))
         .or_else(|_| std::env::var("HOME").map(|p| format!("{p}/Downloads")))
@@ -210,11 +267,21 @@ pub fn default_dest() -> String {
 
 /// Persist the handful of user settings as a tiny `key=value` file.
 pub fn settings_file() -> Option<PathBuf> {
+    let dir = app_home()?.join("data");
+    std::fs::create_dir_all(&dir).ok()?;
+    Some(dir.join("settings.txt"))
+}
+
+/// Settings location used before everything moved into the app folder. It is
+/// only read, once, so upgrades keep the user's format/destination choices.
+pub fn legacy_settings_file() -> Option<PathBuf> {
     let base = std::env::var("APPDATA")
         .ok()
         .or_else(|| std::env::var("XDG_CONFIG_HOME").ok())
         .or_else(|| std::env::var("HOME").ok().map(|h| format!("{h}/.config")))?;
-    let dir = PathBuf::from(base).join("m3u8-studio");
-    std::fs::create_dir_all(&dir).ok()?;
-    Some(dir.join("settings.txt"))
+    Some(
+        PathBuf::from(base)
+            .join(APP_DIR_NAME)
+            .join("settings.txt"),
+    )
 }

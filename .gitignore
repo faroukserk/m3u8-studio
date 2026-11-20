@@ -16,3 +16,7 @@ Thumbs.db
 # Local data and logs
 *.log
 settings.txt
+
+# Installer output
+/dist/
+/m3u8-studio-*-setup.exe

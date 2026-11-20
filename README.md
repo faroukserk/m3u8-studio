@@ -44,7 +44,31 @@ if you encounter any issues. just post them in ussues tab!
   optional *Also remove the downloaded file* toggle (pre-checked when a file
   exists on disk). Cancel leaves both the task and the file untouched.
 - **Settings remembered** — format, destination, restart interval, auto-start,
-  and activity-panel state live in `%APPDATA%\m3u8-studio\settings.txt`.
+  and activity-panel state live in `data\settings.txt` inside the app folder.
+- **One folder, no dependencies** — the Windows build links the C runtime
+  statically. Settings (`data\`), downloads (`downloads\`) and the browser
+  extension (`extension\`) all live beside the executable, so the app is fully
+  portable: install it, or copy the folder to a USB stick.
+
+## Install on Windows
+
+Download `m3u8-studio-<version>-windows-x86_64-setup.exe` from the
+[releases page](https://github.com/faroukserk/m3u8-studio/releases) and run it.
+The installer is built with **Inno Setup** and needs no administrator rights:
+
+- Installs to `%LOCALAPPDATA%\Programs\m3u8 studio` (one folder).
+- Adds Start Menu entries and an optional desktop shortcut, plus an uninstaller
+  in *Settings → Apps*.
+- Ships the executable, license and the ready-to-load extension folder. The
+  first launch creates `data\` (settings) and refreshes `extension\`; the first
+  download creates `downloads\`.
+- The executable links the C runtime statically, so no VC++ redistributable is
+  required.
+
+The `.zip` build remains fully portable: extract it anywhere writable and the
+same single-folder layout is used. Set `M3U8_STUDIO_HOME` to force a different
+data folder. If the executable sits in a read-only location, the app falls back
+to `%APPDATA%\m3u8-studio`.
 
 ## Build and run
 
@@ -62,14 +86,27 @@ cargo run
 ```
 
 The first build compiles Slint, which takes a few minutes. The release profile
-uses thin LTO and strips symbols.
+uses thin LTO and strips symbols. The Windows target links the C runtime
+statically (`.cargo/config.toml`), so the executable has no VC++ redistributable
+dependency.
+
+To build the Windows installer, install [Inno Setup](https://jrsoftware.org/isinfo.php)
+6.3+ (or 7) and run:
+
+```powershell
+cargo build --release
+& "$env:LOCALAPPDATA\Programs\Inno Setup 7\ISCC.exe" /DMyAppVersion=1.3.0 installer\m3u8-studio.iss
+```
+
+The setup executable is written to the repository root.
 
 ## Downloads and releases
 
-Pushing a `v*` tag (for example `v1.2.1`) runs
+Pushing a `v*` tag (for example `v1.3.0`) runs
 `.github/workflows/release.yml`, which builds archives for **Windows x86_64**
-(`.zip`), **Linux x86_64 (GNU and musl)**, **Linux aarch64**, **macOS arm64**
-and **macOS x86_64** (`.tar.gz`) and attaches them to the GitHub Release.
+(`.zip` + Inno Setup `-setup.exe`), **Linux x86_64 (GNU and musl)**,
+**Linux aarch64**, **macOS arm64** and **macOS x86_64** (`.tar.gz`) and attaches
+them to the GitHub Release.
 The musl build is statically linked against OpenSSL and works on Alpine and
 older glibc-based distros; the aarch64 build targets 64-bit ARM Linux.
 You can also run the workflow manually from the Actions tab; manual runs upload
@@ -85,7 +122,7 @@ executable on first launch, so keep the binary in a writable folder.
 
 ## Using the browser extension
 
-1. Start the app. It writes the extension to `<exe folder>\extension\` and logs
+1. Start the app. It writes the extension to `<app folder>\extension\` and logs
    the exact path.
 2. Load that folder in your browser:
    - **Chrome / Edge:** `chrome://extensions` → Developer mode → Load unpacked.
@@ -118,7 +155,7 @@ responses include permissive CORS headers.
 
 | Method | Path | Result |
 | --- | --- | --- |
-| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.2.8"}` |
+| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.3.0"}` |
 | `GET` | `/status` | active/pending counts, auto-start flag, per-stream state |
 | `GET` | `/list` | URLs currently in the queue |
 | `POST` | `/add?url=…&title=…` | queue a stream; needs `X-M3U8-Studio: 1`; also accepts a JSON body |

@@ -119,11 +119,44 @@ jobs:
           Compress-Archive -Path $stage -DestinationPath "$name.zip"
           "ASSET=$name.zip" >> $env:GITHUB_ENV
 
+      - name: Build installer (Inno Setup)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "manual" }
+          $pkgVersion = $version.TrimStart('v')
+          $candidates = @(
+            (Join-Path ${env:ProgramFiles} "Inno Setup 7\ISCC.exe"),
+            (Join-Path ${env:ProgramFiles} "Inno Setup 6\ISCC.exe"),
+            (Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"),
+            (Join-Path ${env:LOCALAPPDATA} "Programs\Inno Setup 7\ISCC.exe"),
+            (Join-Path ${env:LOCALAPPDATA} "Programs\Inno Setup 6\ISCC.exe")
+          )
+          $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) {
+            choco install innosetup --yes --no-progress
+            $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
+          if (-not $iscc) { throw "Inno Setup compiler not found" }
+          & $iscc "/DMyAppVersion=$pkgVersion" "installer\m3u8-studio.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
+          $installer = "m3u8-studio-$pkgVersion-${{ matrix.target }}-setup.exe"
+          if (-not (Test-Path $installer)) { throw "Installer was not produced: $installer" }
+          "INSTALLER_ASSET=$installer" >> $env:GITHUB_ENV
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
           path: ${{ env.ASSET }}
+          if-no-files-found: error
+
+      - name: Upload installer artifact
+        if: matrix.archive == 'zip'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}-setup
+          path: ${{ env.INSTALLER_ASSET }}
           if-no-files-found: error
 
       - name: Attach to GitHub Release
@@ -133,8 +166,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag "$ASSET" \
-            || gh release upload "$GITHUB_REF_NAME" "$ASSET" --clobber
+          assets=("$ASSET")
+          if [ -n "${INSTALLER_ASSET:-}" ]; then
+            assets+=("$INSTALLER_ASSET")
+          fi
+          gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag "${assets[@]}" \
+            || gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
 
   extension:
     name: browser-extension (CRX + XPI)

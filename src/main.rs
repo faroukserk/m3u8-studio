@@ -118,9 +118,15 @@ fn load_settings() -> Settings {
     let Some(path) = extension::settings_file() else {
         return out;
     };
-    let Ok(text) = std::fs::read_to_string(path) else {
-        return out;
-    };
+    // Fall back to the pre-1.3 location so upgrades keep their preferences.
+    let current = std::fs::read_to_string(&path).ok();
+    let migrated = current.is_none();
+    let text = current
+        .or_else(|| {
+            extension::legacy_settings_file()
+                .and_then(|legacy| std::fs::read_to_string(legacy).ok())
+        })
+        .unwrap_or_default();
     for line in text.lines() {
         let Some((key, value)) = line.split_once('=') else {
             continue;
@@ -149,20 +155,44 @@ fn load_settings() -> Settings {
             _ => {}
         }
     }
+    if migrated {
+        // A settings file inherited from another machine can point at a folder
+        // that doesn't exist here; keep the self-contained default instead.
+        if !std::path::Path::new(&out.dest).is_dir() {
+            out.dest = extension::default_dest();
+        }
+        let _ = std::fs::write(
+            &path,
+            settings_body(
+                out.format,
+                &out.dest,
+                out.restart,
+                out.auto_start,
+                out.activity,
+            ),
+        );
+    }
     out
+}
+
+fn settings_body(format: usize, dest: &str, restart: i32, auto_start: bool, activity: bool) -> String {
+    format!(
+        "format={format}\ndest={dest}\nrestart={restart}\nauto_start={}\nactivity={}\n",
+        if auto_start { 1 } else { 0 },
+        if activity { 1 } else { 0 }
+    )
 }
 
 fn save_settings(state: &AppState) {
     let Some(path) = extension::settings_file() else {
         return;
     };
-    let body = format!(
-        "format={}\ndest={}\nrestart={}\nauto_start={}\nactivity={}\n",
+    let body = settings_body(
         state.format,
-        state.dest,
+        &state.dest,
         state.restart,
-        if state.auto_start { 1 } else { 0 },
-        if state.activity_open { 1 } else { 0 }
+        state.auto_start,
+        state.activity_open,
     );
     let _ = std::fs::write(path, body);
 }

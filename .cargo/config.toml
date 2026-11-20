@@ -1,0 +1,4 @@
+# Windows builds are fully self-contained: link the C runtime statically so a
+# portable folder or per-user install needs no VC++ redistributable.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

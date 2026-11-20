@@ -44,6 +44,13 @@ Observed facts (evidence in the investigation record):
 - UI: Slint (`ui/*.slint`) with a custom dark theme — no `std-widgets` chrome except the URL `LineEdit` and the two `ScrollView`s. Layout: a 286 px settings rail (format pills, destination, auto-restart stepper, auto-download toggle, bridge status) plus the download header, add-URL bar, task cards, collapsible activity log, setup overlay and toast.
 - Worker: one `std::thread` per URL with its own `Arc<AtomicBool>` stop flag. Progress lives in atomics (`done`, `total`, `bytes`, `speed`); the human status string stays in `Arc<Mutex<String>>` shared with `hls::download_stream`. A 250 ms `slint::Timer` drives row updates, speed calculation, bridge draining and the toast.
 - Bridge: `src/bridge.rs` listens on `127.0.0.1:37811`, checks the Host header, rejects http(s) `Origin`s, and requires `X-M3U8-Studio: 1` for `POST /add`. The app publishes its queue to `/status`, which the extension popup reads.
-- Extension: `extension/` is an MV3 add-on. It observes `webRequest` traffic, scans the DOM and `PerformanceResourceTiming` in every frame, stores detections per tab in `chrome.storage.session`, and pushes them to the bridge. Files are embedded with `include_str!`/`include_bytes!` and unpacked to `<exe dir>/extension/` by `src/extension.rs`.
-- Settings: `%APPDATA%\m3u8-studio\settings.txt` (format, destination, restart seconds, auto-start, activity panel visibility).
+- Extension: `extension/` is an MV3 add-on. It observes `webRequest` traffic, scans the DOM and `PerformanceResourceTiming` in every frame, stores detections per tab in `chrome.storage.session`, and pushes them to the bridge. Files are embedded with `include_str!`/`include_bytes!` and unpacked to `<app folder>/extension/` by `src/extension.rs`.
+- Settings: `<app folder>\data\settings.txt` (format, destination, restart
+  seconds, auto-start, activity panel visibility). The folder is the executable's
+  directory when writable (portable / per-user install), otherwise
+  `%APPDATA%\m3u8-studio`; old settings are migrated on first launch.
+- Packaging: `installer/m3u8-studio.iss` builds a per-user Inno Setup installer
+  (no admin, no VC++ redistributable: the Windows target links the CRT
+  statically). The installer and the portable zip share the same single-folder
+  layout: executable, `extension\`, `data\`, `downloads\`.
 - Dropped from the old egui build: `--screenshot`, `--package-source`, `--verify-zip`, `src/package.rs`, `src/verifyzip.rs` and the `image` dependency.
