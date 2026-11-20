@@ -414,6 +414,29 @@ main {
   background: #3ddc9712;
 }
 
+.copy {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--dim);
+  font: inherit;
+  font-size: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.copy:hover {
+  color: #0a0d14;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
 /* ---------------------------------------------------------------- empty */
 
 .empty {

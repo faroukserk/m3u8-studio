@@ -36,6 +36,9 @@ if you encounter any issues. just post them in ussues tab!
   streams retry after the auto-restart interval (2–1000 s, default 10 s).
 - **Browser bridge** — a loopback HTTP server on `127.0.0.1:37811` lets the
   bundled extension queue links, optionally starting them immediately.
+- **Site-friendly download headers** — segment, key and playlist requests send
+  a browser-like User-Agent and the playlist URL as `Referer`, so sites that
+  403 plain downloader agents accept them.
 - **Bundled extension** — unpacked next to the executable on first launch; the
   sidebar opens the folder for you and shows whether the bridge is listening.
 - **Original names** — downloads are named after the stream/page title,
@@ -155,7 +158,7 @@ responses include permissive CORS headers.
 
 | Method | Path | Result |
 | --- | --- | --- |
-| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.3.0"}` |
+| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.3.1"}` |
 | `GET` | `/status` | active/pending counts, auto-start flag, per-stream state |
 | `GET` | `/list` | URLs currently in the queue |
 | `POST` | `/add?url=…&title=…` | queue a stream; needs `X-M3U8-Studio: 1`; also accepts a JSON body |

@@ -26,6 +26,9 @@ key that Firefox and Safari need.
 
 - Play a video, then click the toolbar icon. Every manifest the page loaded is
   listed, newest first. The badge shows how many streams were found on the tab.
+- **Auto-send** — the *Auto-send* checkbox (default off) queues new streams
+  straight to the desktop app without clicking **Send**.
+- Each stream row has a **Copy** button for its URL.
 - **Send stream** / **Send all** queues it in the desktop app. With
   *Auto-download new links* enabled (default), the download starts immediately.
 - Right-click any link, video, or the page itself → **Send to m3u8 studio**.
@@ -42,8 +45,19 @@ key that Firefox and Safari need.
 
 Results are stored per tab in `storage.session` (or `storage.local` on older
 engines) and cleared when the tab closes. The `api.js` shim lets the same files
-run on Chromium's callback-style `chrome.*`, Firefox/Safari's promise-based
-`browser.*`, and both service-worker and event-page backgrounds.
+run on Chromium's callback-style `chrome.*` and Firefox/Safari's promise-based
+`browser.*`.
+
+There are two manifests:
+
+- `manifest.json` — pure MV3 for **Chrome/Edge**: `background.service_worker`
+  only (no `background.scripts` or `persistent`, which Chrome MV3 rejects).
+- `manifest.firefox.json` — MV3 for **Firefox/Safari**: `background.scripts`
+  event page. The XPI release swaps this in as `manifest.json`.
+
+The desktop app unpacks both files; if you want to load the unpacked folder in
+Firefox/Safari, copy `manifest.firefox.json` over `manifest.json` first (or just
+install the provided `.xpi`).
 
 ## Bridge endpoints
 

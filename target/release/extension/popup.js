@@ -10,6 +10,7 @@ const sendBest = $("sendBest");
 const sendBestText = $("sendBestText");
 const rescan = $("rescan");
 const sendAll = $("sendAll");
+const autoSendToggle = $("autoSend");
 const count = $("count");
 const list = $("list");
 const empty = $("empty");
@@ -23,6 +24,7 @@ let online = false;
 let appItems = new Map(); // url -> { state, progress }
 let busy = false;
 let pollTimer = 0;
+let autoSendFlag = false;
 
 // --------------------------------------------------------------- utilities
 
@@ -81,6 +83,37 @@ function note(text) {
   }, 4000);
 }
 
+// --------------------------------------------------------------- auto-send
+
+const AUTO_SEND_KEY = "m3u8_autoSend";
+
+async function setAutoSendFlag(value) {
+  autoSendFlag = value;
+  autoSendToggle.setAttribute("aria-checked", value ? "true" : "false");
+  autoSendToggle.title = value
+    ? "Turn off auto-send"
+    : "Send new streams to the desktop app";
+  try {
+    await EXT.storage.local.set({ [AUTO_SEND_KEY]: value });
+  } catch (_) {}
+  if (value && online && !busy) sendMany();
+}
+
+async function loadAutoSend() {
+  try {
+    const data = await EXT.storage.local.get(AUTO_SEND_KEY);
+    autoSendFlag = !!data[AUTO_SEND_KEY];
+    autoSendToggle.setAttribute("aria-checked", autoSendFlag ? "true" : "false");
+    autoSendToggle.title = autoSendFlag
+      ? "Auto-send is on — turn off to stop sending new streams to the desktop app"
+      : "Send new streams to the desktop app";
+  } catch (_) {}
+}
+
+autoSendToggle.addEventListener("click", () => {
+  setAutoSendFlag(!autoSendFlag);
+});
+
 // ------------------------------------------------------------------ status
 
 function setPill(mode, text) {
@@ -116,6 +149,7 @@ async function refreshStatus() {
     if (!note._timer) footerNote.textContent = "App offline";
   }
 
+  await loadAutoSend();
   diffRender();
 }
 
@@ -184,6 +218,18 @@ function render() {
       chip.title = `Desktop app status: ${entry.state}`;
       row.append(chip);
     }
+
+    const copyButton = document.createElement("button");
+    copyButton.className = "copy";
+    copyButton.setAttribute("title", "Copy URL");
+    copyButton.textContent = "Copy";
+    copyButton.addEventListener("click", () => {
+      navigator.clipboard.writeText(item.url).then(
+        () => note("Copied URL"),
+        () => note("Clipboard blocked")
+      );
+    });
+    row.append(copyButton);
 
     const button = document.createElement("button");
     button.className = "send";

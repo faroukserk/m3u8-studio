@@ -36,14 +36,26 @@ pub struct Playlist {
     pub segments: Vec<String>,
 }
 
-pub fn http_get(client: &reqwest::blocking::Client, url: &str) -> Result<Vec<u8>, String> {
-    let resp = client
+/// Browser User-Agent. Some sites return 403 to "downloader" agents and serve
+/// fine to browsers, so downloads send a browser-like agent by default.
+const BROWSER_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
+
+/// `Referer` is passed as the page URL that references the resource: key and
+/// segment requests carry it, which is what real browsers do and what several
+/// sites check before allowing a download.
+pub fn http_get(
+    client: &reqwest::blocking::Client,
+    url: &str,
+    referer: Option<&str>,
+) -> Result<Vec<u8>, String> {
+    let mut req = client
         .get(url)
-        .header("User-Agent", "m3u8-downloader-rebuild/0.1")
-        .header(
-            "Accept",
-            "application/vnd.apple.mpegurl, application/x-mpegURL, */*",
-        )
+        .header("User-Agent", BROWSER_UA)
+        .header("Accept", "*/*");
+    if let Some(referer) = referer.map(str::trim).filter(|r| !r.is_empty()) {
+        req = req.header("Referer", referer);
+    }
+    let resp = req
         .send()
         .map_err(|e| format!("GET {url}: {e}"))?;
     let status = resp.status();
@@ -178,13 +190,13 @@ pub fn fetch_media_playlist(
     url: &str,
 ) -> Result<(String, Playlist), String> {
     let base = Url::parse(url).map_err(|e| format!("bad URL {url:?}: {e}"))?;
-    let body = http_get(client, url)?;
+    let body = http_get(client, url, Some(url))?;
     let text = String::from_utf8_lossy(&body);
     let pl = parse_playlist(&text, &base)?;
     if pl.is_master {
         if let Some(variant) = &pl.variant {
             let vbase = Url::parse(variant).map_err(|e| format!("bad variant URL: {e}"))?;
-            let vbody = http_get(client, variant)?;
+            let vbody = http_get(client, variant, Some(url))?;
             let vtext = String::from_utf8_lossy(&vbody);
             let vpl = parse_playlist(&vtext, &vbase)?;
             return Ok((variant.clone(), vpl));
@@ -319,7 +331,7 @@ fn download_once(
         Some(k) if k.method.eq_ignore_ascii_case("AES-128") => {
             let key_url = resolve(&Url::parse(&pl_url).map_err(|e| e.to_string())?, &k.uri)?;
             set_status("Fetching decryption key…");
-            let kb = http_get(client, &key_url)?;
+            let kb = http_get(client, &key_url, Some(pl_url.as_str()))?;
             if kb.len() != 16 {
                 return Err(format!(
                     "key at {key_url} is {} bytes, expected 16 (AES-128)",
@@ -366,7 +378,7 @@ fn download_once(
                 done + 1,
                 total
             ));
-            let data = http_get(client, seg)?;
+            let data = http_get(client, seg, Some(pl_url.as_str()))?;
             let plain = match &key {
                 Some(k) => {
                     let iv = key_iv.unwrap_or_else(|| seq_iv(seq));
@@ -397,7 +409,7 @@ fn download_once(
         if stop.load(Ordering::SeqCst) {
             return Err("stopped by user".to_string());
         }
-        let body = http_get(client, &pl_url)?;
+        let body = http_get(client, &pl_url, Some(pl_url.as_str()))?;
         let base = Url::parse(&pl_url).map_err(|e| e.to_string())?;
         let text = String::from_utf8_lossy(&body);
         let new_pl = parse_playlist(&text, &base)?;

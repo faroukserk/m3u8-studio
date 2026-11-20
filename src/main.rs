@@ -912,6 +912,9 @@ fn spawn_download(task: Arc<Task>, path: PathBuf, repoll: u64) {
         let client = reqwest::blocking::Client::builder()
             .timeout(Duration::from_secs(60))
             .user_agent(concat!("m3u8-studio/", env!("CARGO_PKG_VERSION")))
+            // Keep cookies set by the server during the download: several
+            // sites authorize segments/keys only after a first response.
+            .cookie_store(true)
             .build();
 
         let client = match client {
