@@ -323,6 +323,22 @@ impl AppState {
         }
     }
 
+    fn send_clipboard(&mut self) {
+        let text = extension::read_clipboard();
+        let url = text
+            .lines()
+            .find_map(|line| {
+                let s = line.trim();
+                (is_http_url(s)).then(|| s.to_string())
+            })
+            .unwrap_or_default();
+        if url.is_empty() {
+            self.toast("No HLS link found on the clipboard");
+            return;
+        }
+        self.add_from_input(url);
+    }
+
     fn start_task(&mut self, id: i32) {
         let Some(task) = self.find(id) else { return };
         if task.state() == ST_RUNNING {
@@ -1060,6 +1076,15 @@ fn wire(state: Rc<RefCell<AppState>>, ui: &AppWindow) {
         move |text| {
             if let Ok(mut s) = state.try_borrow_mut() {
                 s.add_from_input(text.to_string());
+            }
+        }
+    });
+
+    ui.on_send_clipboard({
+        let state = state.clone();
+        move || {
+            if let Ok(mut s) = state.try_borrow_mut() {
+                s.send_clipboard();
             }
         }
     });

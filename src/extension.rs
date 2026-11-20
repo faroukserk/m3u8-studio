@@ -88,6 +88,46 @@ pub fn reveal_file(path: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Best-effort clipboard read without pulling in an extra dependency.
+pub fn read_clipboard() -> String {
+    #[allow(dead_code)]
+    fn run(program: &str, args: &[&str]) -> String {
+        match Command::new(program).args(args).output() {
+            Ok(out) if out.status.success() => String::from_utf8_lossy(&out.stdout).into_owned(),
+            _ => String::new(),
+        }
+    }
+    #[cfg(target_os = "windows")]
+    {
+        match Command::new("powershell.exe")
+            .args(["-NoProfile", "-Command", "Get-Clipboard"])
+            .output()
+        {
+            Ok(out) if out.status.success() => {
+                String::from_utf8_lossy(&out.stdout).trim().to_string()
+            }
+            _ => String::new(),
+        }
+    }
+    #[cfg(target_os = "macos")]
+    {
+        run("pbpaste", &[]).trim().to_string()
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        for (program, args) in [
+            ("wl-paste", &[] as &[&str]),
+            ("xclip", &["-selection", "clipboard", "-o"]),
+        ] {
+            let text = run(program, args);
+            if !text.is_empty() {
+                return text.trim().to_string();
+            }
+        }
+        String::new()
+    }
+}
+
 /// Best-effort clipboard copy without pulling in an extra dependency.
 pub fn copy_text(text: &str) -> bool {
     #[cfg(target_os = "windows")]

@@ -565,6 +565,7 @@ export component AppWindow inherits Window {
     in-out property <bool> remove-file: false;
 
     callback add-url(string);
+    callback send-clipboard();
     callback select-task(int);
     callback start-task(int);
     callback stop-task(int);
@@ -730,6 +731,11 @@ export component AppWindow inherits Window {
                                 icon: Icons.plus;
                                 enabled: !root.url-input.is-empty;
                                 clicked => { root.add-url(root.url-input); }
+                            }
+                            PrimaryButton {
+                                text: "Send clipboard";
+                                icon: Icons.download;
+                                clicked => { root.send-clipboard(); }
                             }
                         }
                     }

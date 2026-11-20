@@ -49,6 +49,17 @@ function setBadge(tabId, count) {
   }
 }
 
+const AUTO_SEND_KEY = "m3u8_autoSend";
+
+async function getAutoSendEnabled() {
+  try {
+    const data = await EXT.storage.local.get(AUTO_SEND_KEY);
+    return !!data[AUTO_SEND_KEY];
+  } catch (_) {
+    return false;
+  }
+}
+
 async function addDetection(tabId, url, source = "network", titleHint = "") {
   if (tabId < 0 || !looksHls(url)) return;
   await serial(async () => {
@@ -72,6 +83,11 @@ async function addDetection(tabId, url, source = "network", titleHint = "") {
     const trimmed = list.slice(0, MAX_PER_TAB);
     await EXT.session.set({ [keyFor(tabId)]: trimmed });
     setBadge(tabId, trimmed.length);
+    // Auto-send: queue brand-new detections straight to the desktop app when
+    // the user enabled it in the popup.
+    if ((await getAutoSendEnabled()) && trimmed[0]) {
+      await sendItems([{ url: trimmed[0].url, title: trimmed[0].title }], "").catch(() => {});
+    }
   });
 }
 

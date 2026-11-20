@@ -22,6 +22,11 @@ if you encounter any issues. just post them in ussues tab!
 
 - **Dark, quiet UI** — 270 px settings rail, stream cards with live progress,
   collapsible activity log, toast notifications.
+- **Send from clipboard** — a "Send clipboard" button in the header parses the
+  first HLS link in the clipboard and queues it.
+- **Easier removal** — the trash icon opens a confirmation dialog with an
+  optional *Also remove the downloaded file* toggle (pre-checked when a file
+  exists on disk).
 - **System tray** — minimizing or closing the window hides the app into the
   tray; click the icon or use its menu to show the window or quit.
 - **Formats** — MKV, MP4, MOV, TS, WebM (the segments are written as-is; the
@@ -113,7 +118,7 @@ responses include permissive CORS headers.
 
 | Method | Path | Result |
 | --- | --- | --- |
-| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.2.7"}` |
+| `GET` | `/ping` | `{"ok":true,"app":"m3u8 studio","version":"1.2.8"}` |
 | `GET` | `/status` | active/pending counts, auto-start flag, per-stream state |
 | `GET` | `/list` | URLs currently in the queue |
 | `POST` | `/add?url=…&title=…` | queue a stream; needs `X-M3U8-Studio: 1`; also accepts a JSON body |
