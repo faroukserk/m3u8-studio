@@ -3,6 +3,9 @@
 ; Build locally:
 ;   ISCC.exe /DMyAppVersion=1.3.0 installer\m3u8-studio.iss
 ;
+; CI overrides the binary location with:
+;   /DMyAppBinary=<repo>\target\<triple>\release\m3u8-studio.exe
+;
 ; The installer puts the executable, the bundled browser extension, settings
 ; and downloads inside one writable folder:
 ;   %LOCALAPPDATA%\Programs\m3u8 studio
@@ -15,6 +18,11 @@
 
 #ifndef MyAppVersion
   #define MyAppVersion "0.0.0-dev"
+#endif
+
+; CI builds into target/<triple>/release, so the caller can override the source.
+#ifndef MyAppBinary
+  #define MyAppBinary "..\target\release\m3u8-studio.exe"
 #endif
 
 [Setup]
@@ -52,7 +60,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "..\target\release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyAppBinary}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 ; Ready-to-load extension. The app refreshes this folder itself when the
